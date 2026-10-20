@@ -41,11 +41,11 @@ export const DesktopBottomDocks: React.FC = () => {
           LEFT BOTTOM DOCK (چپ پایین - دسکتاپ)
           آیین‌های صبح و شب، تغییر تم و راهنما
           ======================================================== */}
-      <div className="hidden md:flex fixed bottom-4 left-4 z-40 items-center gap-1.5 p-1.5 rounded-2xl bg-canvas-elevated liquid-glass border border-white/10 dark:border-white/10 shadow-2xl backdrop-blur-xl select-none transition-all duration-200">
+      <div className="hidden md:flex fixed bottom-4 left-4 z-40 items-center gap-1.5 p-1.5 rounded-2xl bg-canvas-elevated liquid-glass border border-border-subtle shadow-2xl backdrop-blur-xl select-none transition-all duration-200">
         {/* Morning Ritual */}
         <button
           onClick={() => setMorningPlanningOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border-subtle hover:bg-white/5 text-xs text-ink-muted hover:text-ink-primary transition active:scale-95"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border-subtle hover:bg-black/5 dark:hover:bg-white/10 text-xs text-ink-muted hover:text-ink-primary transition active:scale-95"
           title="آیین صبحگاهی سان‌ساما (تعیین ۳ تسک طلایی)"
         >
           <Sunrise className="w-4 h-4 text-amber-500" />
@@ -55,7 +55,7 @@ export const DesktopBottomDocks: React.FC = () => {
         {/* Evening Reflection */}
         <button
           onClick={() => setEveningReflectionOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border-subtle hover:bg-white/5 text-xs text-ink-muted hover:text-ink-primary transition active:scale-95"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border-subtle hover:bg-black/5 dark:hover:bg-white/10 text-xs text-ink-muted hover:text-ink-primary transition active:scale-95"
           title="آیین شبانگاهی و تخلیه ذهن"
         >
           <Sunset className="w-4 h-4 text-indigo-400" />
@@ -65,7 +65,7 @@ export const DesktopBottomDocks: React.FC = () => {
         {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-xl border border-border-subtle hover:bg-white/5 text-ink-muted hover:text-ink-primary transition active:scale-90"
+          className="p-2 rounded-xl border border-border-subtle hover:bg-black/5 dark:hover:bg-white/10 text-ink-muted hover:text-ink-primary transition active:scale-90"
           title={isDark ? 'تغییر به تم روشن' : 'تغییر به تم تاریک'}
         >
           {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-500" />}
@@ -74,7 +74,7 @@ export const DesktopBottomDocks: React.FC = () => {
         {/* Shortcut Cheat Sheet */}
         <button
           onClick={() => setCheatSheetOpen(true)}
-          className="p-2 rounded-xl border border-border-subtle hover:bg-white/5 text-ink-muted hover:text-ink-primary transition active:scale-90"
+          className="p-2 rounded-xl border border-border-subtle hover:bg-black/5 dark:hover:bg-white/10 text-ink-muted hover:text-ink-primary transition active:scale-90"
           title="راهنمای کلیدهای میانبر کیبورد (?)"
         >
           <HelpCircle className="w-4 h-4" />
@@ -85,14 +85,14 @@ export const DesktopBottomDocks: React.FC = () => {
           RIGHT BOTTOM DOCK (راست پایین - دسکتاپ)
           تسک جدید، هوش مصنوعی Brain Dump، تایمر تمرکز و اینسپکتور
           ======================================================== */}
-      <div className="hidden md:flex fixed bottom-4 right-4 z-40 items-center gap-2 p-1.5 rounded-2xl bg-canvas-elevated liquid-glass border border-white/10 dark:border-white/10 shadow-2xl backdrop-blur-xl select-none transition-all duration-200">
+      <div className="hidden md:flex fixed bottom-4 right-4 z-40 items-center gap-2 p-1.5 rounded-2xl bg-canvas-elevated liquid-glass border border-border-subtle shadow-2xl backdrop-blur-xl select-none transition-all duration-200">
         {/* Right Inspector Panel Toggle */}
         <button
           onClick={toggleRightInspector}
           className={`p-2 rounded-xl border transition flex items-center justify-center touch-target ${
             isRightInspectorOpen
               ? 'bg-accent-primary/20 text-accent-primary border-accent-primary/40'
-              : 'border-border-subtle hover:bg-white/5 text-ink-muted hover:text-ink-primary'
+              : 'border-border-subtle hover:bg-black/5 dark:hover:bg-white/10 text-ink-muted hover:text-ink-primary'
           }`}
           title="نمایش / مخفی‌سازی پنل یادداشت و جزئیات تسک"
         >
@@ -105,7 +105,7 @@ export const DesktopBottomDocks: React.FC = () => {
           className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition active:scale-95 ${
             isTimerRunning
               ? 'bg-accent-primary/20 text-accent-primary border-accent-primary/50 animate-pulse'
-              : 'bg-canvas-secondary border-border-subtle text-ink-muted hover:text-ink-primary hover:bg-white/5'
+              : 'bg-canvas-secondary border-border-subtle text-ink-muted hover:text-ink-primary hover:bg-black/5 dark:hover:bg-white/10'
           }`}
           title="استودیوی تمرکز و تایمر مطالعه YPT"
         >

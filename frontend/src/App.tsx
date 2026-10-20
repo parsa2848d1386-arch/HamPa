@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from './store/useAppStore';
 import { HeaderBar } from './components/layout/HeaderBar';
 import { LeftSidebar } from './components/layout/LeftSidebar';
@@ -42,21 +43,32 @@ export const App: React.FC = () => {
       <HeaderBar />
 
       {/* Main Workspace (3-Zone High-Density Layout) */}
-      <main className="flex-1 flex overflow-hidden relative pb-16 md:pb-0">
+      <main className="flex-1 flex overflow-hidden relative pb-20 md:pb-16">
         {/* Zone 1: Collapsible Left Mini-Month & Category Inbox */}
         <LeftSidebar />
 
         {/* Zone 2: Center Interactive View Port */}
         <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-          {viewMode === 'dashboard' && <MainDashboardView />}
-          {viewMode === 'day' && <UnifiedTimeline />}
-          {viewMode === 'dual_planner' && <DualColumn10MinuteGrid />}
-          {viewMode === 'eisenhower' && <EisenhowerMatrixView />}
-          {viewMode === 'study_room' && <VirtualStudyRoomView />}
-          {viewMode === 'stylus' && <StylusCanvasLayer />}
-          {viewMode === 'week' && <WeekView />}
-          {viewMode === 'kanban' && <KanbanView />}
-          {viewMode === 'analytics' && <AnalyticsDashboard />}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={viewMode}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -5 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              className="flex-1 flex flex-col h-full overflow-hidden relative"
+            >
+              {viewMode === 'dashboard' && <MainDashboardView />}
+              {viewMode === 'day' && <UnifiedTimeline />}
+              {viewMode === 'dual_planner' && <DualColumn10MinuteGrid />}
+              {viewMode === 'eisenhower' && <EisenhowerMatrixView />}
+              {viewMode === 'study_room' && <VirtualStudyRoomView />}
+              {viewMode === 'stylus' && <StylusCanvasLayer />}
+              {viewMode === 'week' && <WeekView />}
+              {viewMode === 'kanban' && <KanbanView />}
+              {viewMode === 'analytics' && <AnalyticsDashboard />}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {/* Zone 3: Contextual Right Inspector Panel (Notion Blocks + Subtasks) */}

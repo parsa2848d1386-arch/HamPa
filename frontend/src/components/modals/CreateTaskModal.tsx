@@ -16,14 +16,15 @@ import {
   CheckSquare, 
   Trash2,
   FileText,
-  Timer
+  Timer,
+  Grid
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import type { Priority, EnergyLevel, RecurrenceType } from '../../types';
 
 const PRESET_DURATIONS = [
   { label: '۱۵ د', value: 15 },
-  { label: '۳۰ د', value: 30 },
+  { label: '۲۵ د (پومودورو)', value: 25 },
   { label: '۴۵ د', value: 45 },
   { label: '۶۰ د (۱ س)', value: 60 },
   { label: '۹۰ د (۱.۵ س)', value: 90 },
@@ -31,7 +32,16 @@ const PRESET_DURATIONS = [
 ];
 
 const PRESET_TAGS = [
-  'مطالعه', 'تست‌زنی', 'مرور', 'پروژه', 'کدنویسی', 'کنکور', 'تمرین', 'کتاب'
+  'مطالعه', 'تست‌زنی', 'مرور', 'پروژه', 'کدنویسی', 'کنکور', 'تمرین', 'کتاب', 'سلامت'
+];
+
+const QUICK_TEMPLATES = [
+  { label: 'مطالعه عمیق', icon: '📖', duration: 60, priority: 'high' as Priority, energy: 'high' as EnergyLevel, tag: 'مطالعه', pomodoros: 2 },
+  { label: 'تست‌زنی زمان‌دار', icon: '⏱️', duration: 45, priority: 'urgent' as Priority, energy: 'high' as EnergyLevel, tag: 'تست‌زنی', pomodoros: 2 },
+  { label: 'مرور فلش‌کارت', icon: '🧠', duration: 25, priority: 'medium' as Priority, energy: 'medium' as EnergyLevel, tag: 'مرور', pomodoros: 1 },
+  { label: 'حل تمرین', icon: '✍️', duration: 45, priority: 'medium' as Priority, energy: 'medium' as EnergyLevel, tag: 'تمرین', pomodoros: 2 },
+  { label: 'پروژه و کدنویسی', icon: '💻', duration: 90, priority: 'high' as Priority, energy: 'high' as EnergyLevel, tag: 'پروژه', pomodoros: 3 },
+  { label: 'استراحت آگاهانه', icon: '☕', duration: 15, priority: 'low' as Priority, energy: 'low' as EnergyLevel, tag: 'سلامت', pomodoros: 1 },
 ];
 
 export const CreateTaskModal: React.FC = () => {
@@ -48,6 +58,7 @@ export const CreateTaskModal: React.FC = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [subjectId, setSubjectId] = useState(subjects[0]?.id || '');
+  const [targetDate, setTargetDate] = useState(selectedDate);
   const [startTime, setStartTime] = useState('09:00');
   const [duration, setDuration] = useState(45);
   const [priority, setPriority] = useState<Priority>('medium');
@@ -66,6 +77,17 @@ export const CreateTaskModal: React.FC = () => {
   if (!isOpen) return null;
 
   const selectedSubject = subjects.find((s) => s.id === subjectId) || subjects[0];
+
+  const applyTemplate = (t: typeof QUICK_TEMPLATES[0]) => {
+    setTitle(t.label);
+    setDuration(t.duration);
+    setPriority(t.priority);
+    setEnergyLevel(t.energy);
+    setEstimatedPomodoros(t.pomodoros);
+    if (!tags.includes(t.tag)) {
+      setTags([...tags, t.tag]);
+    }
+  };
 
   // Calculate approximate end time
   const calculateEndTime = (start: string, durMin: number) => {
@@ -109,6 +131,12 @@ export const CreateTaskModal: React.FC = () => {
     setSubtasks(subtasks.filter((st) => st.id !== id));
   };
 
+  const handleSetTomorrow = () => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + 1);
+    setTargetDate(d.toISOString().split('T')[0]);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -116,7 +144,7 @@ export const CreateTaskModal: React.FC = () => {
     addTask({
       title: title.trim(),
       description: description.trim() || undefined,
-      date: selectedDate,
+      date: targetDate || selectedDate,
       startTime: startTime || undefined,
       durationMinutes: Number(duration) || 45,
       color: selectedSubject?.color || '#FF4700',
@@ -160,7 +188,7 @@ export const CreateTaskModal: React.FC = () => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
           transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-          className="relative z-10 w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-3xl bg-canvas-elevated liquid-glass border border-white/10 dark:border-white/10 shadow-2xl p-5 md:p-6"
+          className="relative z-10 w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-3xl bg-canvas-elevated liquid-glass border border-border-subtle shadow-2xl p-5 md:p-6"
         >
           {/* Header & Mode Switcher */}
           <div className="flex items-center justify-between pb-4 border-b border-border-subtle">
@@ -173,7 +201,7 @@ export const CreateTaskModal: React.FC = () => {
                   افزودن فعالیت و تسک جدید
                 </h3>
                 <p className="text-xs text-ink-muted">
-                  {mode === 'casual' ? 'ثبت سریع و بی‌دردسر برای برنامه‌ریزی روزانه' : 'تنظیمات تخصصی زمان‌بندی، اولویت و زیرتسک‌ها'}
+                  {mode === 'casual' ? 'ثبت سریع و قالب‌های آماده برای کاربران عادی' : 'تنظیمات تخصصی ماتریس آیزنهاور، زمان‌بندی و زیرتسک‌ها'}
                 </p>
               </div>
             </div>
@@ -209,10 +237,32 @@ export const CreateTaskModal: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="p-1.5 rounded-full hover:bg-white/10 text-ink-muted hover:text-ink-primary transition"
+                className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-ink-muted hover:text-ink-primary transition"
               >
                 <X className="w-5 h-5" />
               </button>
+            </div>
+          </div>
+
+          {/* Quick Template Chips */}
+          <div className="pt-3 pb-1 border-b border-border-subtle">
+            <div className="text-[11px] font-bold text-ink-muted mb-1.5 flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5 text-accent-primary" />
+              <span>الگوهای آماده برای ثبت فوری در ۲ ثانیه:</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5 pb-2">
+              {QUICK_TEMPLATES.map((tmpl) => (
+                <button
+                  key={tmpl.label}
+                  type="button"
+                  onClick={() => applyTemplate(tmpl)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs bg-canvas-secondary hover:bg-accent-primary/10 hover:border-accent-primary/40 border border-border-subtle text-ink-primary transition active:scale-95"
+                >
+                  <span>{tmpl.icon}</span>
+                  <span className="font-semibold">{tmpl.label}</span>
+                  <span className="text-[10px] text-ink-muted font-mono">{tmpl.duration}د</span>
+                </button>
+              ))}
             </div>
           </div>
 
@@ -232,6 +282,44 @@ export const CreateTaskModal: React.FC = () => {
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full bg-canvas-secondary border border-border-subtle focus:border-accent-primary rounded-xl px-3.5 py-2.5 text-sm text-ink-primary outline-none transition"
               />
+            </div>
+
+            {/* Target Date Selector */}
+            <div>
+              <label className="block text-xs font-bold text-ink-muted mb-1 flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-accent-primary" />
+                <span>تاریخ اجرای فعالیت:</span>
+              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTargetDate(selectedDate)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                    targetDate === selectedDate
+                      ? 'bg-accent-primary text-white border-accent-primary shadow-sm'
+                      : 'bg-canvas-secondary border-border-subtle text-ink-muted'
+                  }`}
+                >
+                  امروز
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSetTomorrow}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                    targetDate !== selectedDate
+                      ? 'bg-accent-primary text-white border-accent-primary shadow-sm'
+                      : 'bg-canvas-secondary border-border-subtle text-ink-muted'
+                  }`}
+                >
+                  فردا
+                </button>
+                <input
+                  type="date"
+                  value={targetDate}
+                  onChange={(e) => setTargetDate(e.target.value)}
+                  className="flex-1 bg-canvas-secondary border border-border-subtle rounded-xl px-3 py-1.5 text-xs text-ink-primary font-mono outline-none"
+                />
+              </div>
             </div>
 
             {/* Subject Selector */}
@@ -264,16 +352,29 @@ export const CreateTaskModal: React.FC = () => {
               </div>
             </div>
 
-            {/* Duration Quick Chips */}
+            {/* Duration Quick Chips & Custom Input */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-bold text-ink-muted flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5 text-accent-primary" />
                   <span>مدت زمان:</span>
                 </label>
-                <span className="text-xs font-mono text-ink-primary font-bold">
-                  {duration} دقیقه {startTime && `(پایان: ${calculateEndTime(startTime, duration)})`}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-ink-primary font-bold">
+                    {duration} دقیقه {startTime && `(پایان: ${calculateEndTime(startTime, duration)})`}
+                  </span>
+                  <div className="flex items-center gap-1 bg-canvas-secondary border border-border-subtle rounded-lg px-2 py-0.5">
+                    <input
+                      type="number"
+                      min="5"
+                      max="480"
+                      value={duration}
+                      onChange={(e) => setDuration(Math.max(5, Number(e.target.value)))}
+                      className="w-12 bg-transparent text-center font-mono text-xs font-bold text-ink-primary outline-none"
+                    />
+                    <span className="text-[10px] text-ink-muted">دقیقه</span>
+                  </div>
+                </div>
               </div>
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
                 {PRESET_DURATIONS.map((dur) => (
@@ -320,8 +421,8 @@ export const CreateTaskModal: React.FC = () => {
                 >
                   <option value="urgent">فوری و حیاتی (Urgent - Q1)</option>
                   <option value="high">بالا و بااهمیت (High - Q2)</option>
-                  <option value="medium">متوسط و عادی (Medium)</option>
-                  <option value="low">کم و سبک (Low)</option>
+                  <option value="medium">متوسط و عادی (Medium - Q3)</option>
+                  <option value="low">کم و سبک (Low - Q4)</option>
                 </select>
               </div>
             </div>
@@ -374,6 +475,79 @@ export const CreateTaskModal: React.FC = () => {
                     onChange={(e) => setDescription(e.target.value)}
                     className="w-full bg-canvas-secondary border border-border-subtle focus:border-accent-primary rounded-xl p-2.5 text-xs text-ink-primary outline-none resize-none"
                   />
+                </div>
+
+                {/* Visual Eisenhower Quadrant Selector */}
+                <div>
+                  <label className="block text-xs font-bold text-ink-muted mb-1.5 flex items-center gap-1">
+                    <Grid className="w-3.5 h-3.5 text-accent-primary" />
+                    <span>دسته‌بندی در ماتریس آیزنهاور (Eisenhower Matrix):</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPriority('urgent')}
+                      className={`p-2 rounded-xl text-right border transition ${
+                        priority === 'urgent'
+                          ? 'border-red-500 bg-red-500/15 text-red-400 font-bold shadow-sm'
+                          : 'border-border-subtle bg-canvas-secondary text-ink-muted hover:text-ink-primary'
+                      }`}
+                    >
+                      <div className="text-xs flex items-center justify-between">
+                        <span>🔥 فوری و مهم (Q1)</span>
+                        <span className="text-[10px] opacity-75">اقدام فوری</span>
+                      </div>
+                      <div className="text-[10px] opacity-70 mt-0.5">بحران‌ها و کارهای با ددلاین قطعی</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPriority('high')}
+                      className={`p-2 rounded-xl text-right border transition ${
+                        priority === 'high'
+                          ? 'border-amber-500 bg-amber-500/15 text-amber-400 font-bold shadow-sm'
+                          : 'border-border-subtle bg-canvas-secondary text-ink-muted hover:text-ink-primary'
+                      }`}
+                    >
+                      <div className="text-xs flex items-center justify-between">
+                        <span>⭐ مهم، غیرفوری (Q2)</span>
+                        <span className="text-[10px] opacity-75">برنامه‌ریزی</span>
+                      </div>
+                      <div className="text-[10px] opacity-70 mt-0.5">یادگیری عمیق، کنکور و اهداف بزرگ</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPriority('medium')}
+                      className={`p-2 rounded-xl text-right border transition ${
+                        priority === 'medium'
+                          ? 'border-blue-500 bg-blue-500/15 text-blue-400 font-bold shadow-sm'
+                          : 'border-border-subtle bg-canvas-secondary text-ink-muted hover:text-ink-primary'
+                      }`}
+                    >
+                      <div className="text-xs flex items-center justify-between">
+                        <span>⚡ فوری، کم‌اهمیت (Q3)</span>
+                        <span className="text-[10px] opacity-75">واگذاری / تجمیع</span>
+                      </div>
+                      <div className="text-[10px] opacity-70 mt-0.5">پاسخ به پیام‌ها و کارهای جانبی</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPriority('low')}
+                      className={`p-2 rounded-xl text-right border transition ${
+                        priority === 'low'
+                          ? 'border-emerald-500 bg-emerald-500/15 text-emerald-400 font-bold shadow-sm'
+                          : 'border-border-subtle bg-canvas-secondary text-ink-muted hover:text-ink-primary'
+                      }`}
+                    >
+                      <div className="text-xs flex items-center justify-between">
+                        <span>🌱 غیرفوری، کم‌اهمیت (Q4)</span>
+                        <span className="text-[10px] opacity-75">حذف / فراغت</span>
+                      </div>
+                      <div className="text-[10px] opacity-70 mt-0.5">استراحت، سرگرمی و وقفه</div>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Energy & Pomodoro row */}

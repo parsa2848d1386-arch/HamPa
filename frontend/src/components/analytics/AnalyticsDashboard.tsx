@@ -8,13 +8,46 @@ import { Calendar, Target, TrendingUp, Sparkles } from 'lucide-react';
 export const AnalyticsDashboard: React.FC = () => {
   const subjects = useAppStore((s) => s.subjects);
   const tasks = useAppStore((s) => s.tasks);
+  const user = useAppStore((s) => s.user);
+  const sessions = useAppStore((s) => s.sessions);
 
   // Compute total studied seconds across all subjects
   const totalStudiedSeconds = subjects.reduce((acc, s) => acc + s.totalSecondsStudied, 0);
   const totalStudiedHours = Math.round((totalStudiedSeconds / 3600) * 10) / 10;
 
-  // D-Day target exam calculation (e.g., 75 days to comprehensive exam)
-  const dDayCountdown = 75;
+  // Real D-Day target exam calculation based on user.targetExamDate or end of academic semester
+  const now = new Date();
+  const examDate = user.targetExamDate ? new Date(user.targetExamDate) : new Date(now.getFullYear(), 5, 25);
+  const diffDays = Math.max(1, Math.ceil((examDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+  const dDayCountdown = diffDays;
+
+  // Real weekly comparison from actual sessions
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
+  const fourteenDaysAgo = new Date(now.getTime() - 14 * 86400000);
+  const thisWeekSecs = sessions
+    .filter((s) => {
+      try { return new Date(s.startedAt) >= sevenDaysAgo; } catch { return false; }
+    })
+    .reduce((sum, s) => sum + s.durationSeconds, 0);
+  const lastWeekSecs = sessions
+    .filter((s) => {
+      try {
+        const d = new Date(s.startedAt);
+        return d >= fourteenDaysAgo && d < sevenDaysAgo;
+      } catch { return false; }
+    })
+    .reduce((sum, s) => sum + s.durationSeconds, 0);
+
+  const weeklyDiffPercent = lastWeekSecs > 0
+    ? Math.round(((thisWeekSecs - lastWeekSecs) / lastWeekSecs) * 100)
+    : (thisWeekSecs > 0 ? 100 : 0);
+
+  // Real MIT goals fulfillment rate
+  const mitTasks = tasks.filter((t) => t.isMIT);
+  const completedMITs = mitTasks.filter((t) => t.status === 'completed');
+  const mitRate = mitTasks.length > 0
+    ? Math.round((completedMITs.length / mitTasks.length) * 100)
+    : (tasks.length > 0 ? Math.round((tasks.filter(t => t.status === 'completed').length / tasks.length) * 100) : 100);
 
   return (
     <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 max-w-6xl mx-auto select-none">
@@ -48,7 +81,11 @@ export const AnalyticsDashboard: React.FC = () => {
             </div>
             <div className="text-xs text-emerald-400 mt-1 flex items-center gap-1">
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>۱۴٪ بالاتر از میانگین هفته گذشته</span>
+              <span>
+                {weeklyDiffPercent >= 0
+                  ? `${formatToPersianDigits(weeklyDiffPercent)}٪ رشد تمرکز هفتگی`
+                  : `${formatToPersianDigits(Math.abs(weeklyDiffPercent))}٪ کمتر از هفته قبل`}
+              </span>
             </div>
           </div>
         </div>
@@ -60,9 +97,13 @@ export const AnalyticsDashboard: React.FC = () => {
               نرخ تحقق اهداف روزانه
             </div>
             <div className="text-2xl md:text-3xl font-black text-ink-primary font-mono">
-              {formatToPersianDigits(85)}%
+              {formatToPersianDigits(mitRate)}%
             </div>
-            <div className="text-xs text-ink-muted mt-1">بر اساس برنامه‌ریزی ۳ تسک مهم (MIT)</div>
+            <div className="text-xs text-ink-muted mt-1">
+              {mitTasks.length > 0
+                ? `${formatToPersianDigits(completedMITs.length)} از ${formatToPersianDigits(mitTasks.length)} اولویت طلایی امروز`
+                : 'بر اساس اولویت‌های ثبت‌شده'}
+            </div>
           </div>
         </div>
       </div>

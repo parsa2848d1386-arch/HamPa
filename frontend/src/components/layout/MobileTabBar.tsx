@@ -53,7 +53,7 @@ export const MobileTabBar: React.FC = () => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 450, damping: 30 }}
-              className="relative z-10 w-full max-w-xs rounded-3xl bg-canvas-elevated liquid-glass border border-white/10 dark:border-white/10 shadow-2xl p-4 space-y-2.5"
+              className="relative z-10 w-full max-w-xs rounded-3xl bg-canvas-elevated liquid-glass border border-border-subtle shadow-2xl p-4 space-y-2.5"
             >
               <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
                 <span className="text-xs font-bold text-ink-primary">ثبت فعالیت جدید</span>
@@ -107,7 +107,7 @@ export const MobileTabBar: React.FC = () => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 450, damping: 30 }}
-              className="relative z-10 w-full max-w-sm rounded-3xl bg-canvas-elevated liquid-glass border border-white/10 dark:border-white/10 shadow-2xl p-4 space-y-3"
+              className="relative z-10 w-full max-w-sm rounded-3xl bg-canvas-elevated liquid-glass border border-border-subtle shadow-2xl p-4 space-y-3"
             >
               <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
                 <span className="text-xs font-bold text-ink-primary">سایر نماها و امکانات</span>
@@ -204,27 +204,41 @@ export const MobileTabBar: React.FC = () => {
       {/* ========================================================
           FLOATING MOBILE BOTTOM TAB BAR (نوار پایین شناور و بهینه‌شده)
           ======================================================== */}
-      <div className="md:hidden fixed bottom-3 inset-x-3 max-w-md mx-auto z-40 bg-canvas-elevated liquid-glass border border-white/10 dark:border-white/10 rounded-3xl h-16 px-3 flex items-center justify-between shadow-2xl backdrop-blur-2xl">
+      <div className="md:hidden fixed bottom-3 inset-x-3 max-w-md mx-auto z-40 bg-canvas-elevated liquid-glass border border-border-subtle rounded-3xl h-16 px-3 flex items-center justify-between shadow-2xl backdrop-blur-2xl">
         {/* Tab 1: Dashboard */}
         <button
           onClick={() => setViewMode('dashboard')}
-          className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 touch-target transition ${
+          className={`relative flex flex-col items-center justify-center gap-1 flex-1 py-1 touch-target transition ${
             viewMode === 'dashboard' ? 'text-accent-primary font-bold' : 'text-ink-muted hover:text-ink-primary'
           }`}
         >
           <LayoutGrid className="w-5 h-5" />
           <span className="text-[10px]">داشبورد</span>
+          {viewMode === 'dashboard' && (
+            <motion.div
+              layoutId="mobileActiveTabIndicator"
+              className="absolute -bottom-1 w-4 h-1 rounded-full bg-accent-primary shadow-needle"
+              transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+            />
+          )}
         </button>
 
         {/* Tab 2: Timeline */}
         <button
           onClick={() => setViewMode('day')}
-          className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 touch-target transition ${
+          className={`relative flex flex-col items-center justify-center gap-1 flex-1 py-1 touch-target transition ${
             viewMode === 'day' ? 'text-accent-primary font-bold' : 'text-ink-muted hover:text-ink-primary'
           }`}
         >
           <Clock className="w-5 h-5" />
           <span className="text-[10px]">تایم‌لاین</span>
+          {viewMode === 'day' && (
+            <motion.div
+              layoutId="mobileActiveTabIndicator"
+              className="absolute -bottom-1 w-4 h-1 rounded-full bg-accent-primary shadow-needle"
+              transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+            />
+          )}
         </button>
 
         {/* Center Floating Action Button (FAB) */}
@@ -232,7 +246,7 @@ export const MobileTabBar: React.FC = () => {
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => setIsFabMenuOpen(!isFabMenuOpen)}
-            className="w-13 h-13 w-12 h-12 rounded-full bg-accent-primary text-white shadow-needle flex items-center justify-center active:scale-90 transition border-2 border-canvas"
+            className="w-12 h-12 rounded-full bg-accent-primary text-white shadow-needle flex items-center justify-center active:scale-90 transition border-2 border-canvas"
             aria-label="افزودن فعالیت جدید"
           >
             {isFabMenuOpen ? <X className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
@@ -253,12 +267,19 @@ export const MobileTabBar: React.FC = () => {
         {/* Tab 4: More Views */}
         <button
           onClick={() => setIsMoreViewsOpen(!isMoreViewsOpen)}
-          className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 touch-target transition ${
+          className={`relative flex flex-col items-center justify-center gap-1 flex-1 py-1 touch-target transition ${
             viewMode !== 'dashboard' && viewMode !== 'day' ? 'text-accent-primary font-bold' : 'text-ink-muted hover:text-ink-primary'
           }`}
         >
           <MoreHorizontal className="w-5 h-5" />
           <span className="text-[10px]">سایر</span>
+          {viewMode !== 'dashboard' && viewMode !== 'day' && (
+            <motion.div
+              layoutId="mobileActiveTabIndicator"
+              className="absolute -bottom-1 w-4 h-1 rounded-full bg-accent-primary shadow-needle"
+              transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+            />
+          )}
         </button>
       </div>
     </>

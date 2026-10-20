@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { 
   ChevronRight, 
   ChevronLeft, 
@@ -19,6 +20,18 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { formatDateTitle } from '../../lib/calendarUtils';
+
+const NAV_TABS = [
+  { id: 'dashboard', label: 'داشبورد', icon: LayoutGrid },
+  { id: 'day', label: 'تایم‌لاین', icon: Clock },
+  { id: 'dual_planner', label: 'پلنر ۱۰ دقیقه‌ای', icon: Columns },
+  { id: 'eisenhower', label: 'ماتریس آیزنهاور', icon: Grid },
+  { id: 'kanban', label: 'کانبان', icon: Layout },
+  { id: 'analytics', label: 'آمار YPT', icon: BarChart2 },
+  { id: 'study_room', label: 'اتاق زنده', icon: Users },
+  { id: 'stylus', label: 'بوم قلم', icon: PenTool },
+  { id: 'week', label: 'هفتگی', icon: Columns3 },
+] as const;
 
 export const HeaderBar: React.FC = () => {
   const viewMode = useAppStore((s) => s.viewMode);
@@ -138,122 +151,29 @@ export const HeaderBar: React.FC = () => {
           CENTER: Clean View Switcher (Desktop Navigation Tabs)
           ======================================================== */}
       <div className="hidden md:flex items-center p-0.5 rounded-xl bg-canvas-secondary border border-border-subtle text-xs overflow-x-auto max-w-[680px]">
-        {/* Main Dashboard Widget View */}
-        <button
-          onClick={() => setViewMode('dashboard')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition whitespace-nowrap ${
-            viewMode === 'dashboard'
-              ? 'bg-accent-primary text-white font-bold shadow-sm'
-              : 'text-ink-muted hover:text-ink-primary'
-          }`}
-        >
-          <LayoutGrid className="w-3.5 h-3.5" />
-          <span>داشبورد</span>
-        </button>
-
-        {/* Timeline */}
-        <button
-          onClick={() => setViewMode('day')}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition whitespace-nowrap ${
-            viewMode === 'day'
-              ? 'bg-white/10 text-accent-primary font-bold shadow-sm'
-              : 'text-ink-muted hover:text-ink-primary'
-          }`}
-        >
-          <Clock className="w-3.5 h-3.5" />
-          <span>تایم‌لاین</span>
-        </button>
-
-        {/* 10-Minute Planner */}
-        <button
-          onClick={() => setViewMode('dual_planner')}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition whitespace-nowrap ${
-            viewMode === 'dual_planner'
-              ? 'bg-white/10 text-accent-primary font-bold shadow-sm'
-              : 'text-ink-muted hover:text-ink-primary'
-          }`}
-        >
-          <Columns className="w-3.5 h-3.5" />
-          <span>پلنر ۱۰ دقیقه‌ای</span>
-        </button>
-
-        {/* Eisenhower Matrix */}
-        <button
-          onClick={() => setViewMode('eisenhower')}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition whitespace-nowrap ${
-            viewMode === 'eisenhower'
-              ? 'bg-white/10 text-accent-primary font-bold shadow-sm'
-              : 'text-ink-muted hover:text-ink-primary'
-          }`}
-        >
-          <Grid className="w-3.5 h-3.5" />
-          <span>ماتریس آیزنهاور</span>
-        </button>
-
-        {/* Kanban */}
-        <button
-          onClick={() => setViewMode('kanban')}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition whitespace-nowrap ${
-            viewMode === 'kanban'
-              ? 'bg-white/10 text-accent-primary font-bold shadow-sm'
-              : 'text-ink-muted hover:text-ink-primary'
-          }`}
-        >
-          <Layout className="w-3.5 h-3.5" />
-          <span>کانبان</span>
-        </button>
-
-        {/* YPT Analytics */}
-        <button
-          onClick={() => setViewMode('analytics')}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition whitespace-nowrap ${
-            viewMode === 'analytics'
-              ? 'bg-white/10 text-accent-primary font-bold shadow-sm'
-              : 'text-ink-muted hover:text-ink-primary'
-          }`}
-        >
-          <BarChart2 className="w-3.5 h-3.5" />
-          <span>آمار YPT</span>
-        </button>
-
-        {/* Virtual Study Room */}
-        <button
-          onClick={() => setViewMode('study_room')}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition whitespace-nowrap ${
-            viewMode === 'study_room'
-              ? 'bg-white/10 text-accent-primary font-bold shadow-sm'
-              : 'text-ink-muted hover:text-ink-primary'
-          }`}
-        >
-          <Users className="w-3.5 h-3.5" />
-          <span>اتاق زنده</span>
-        </button>
-
-        {/* Stylus Canvas */}
-        <button
-          onClick={() => setViewMode('stylus')}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition whitespace-nowrap ${
-            viewMode === 'stylus'
-              ? 'bg-white/10 text-accent-primary font-bold shadow-sm'
-              : 'text-ink-muted hover:text-ink-primary'
-          }`}
-        >
-          <PenTool className="w-3.5 h-3.5" />
-          <span>بوم قلم</span>
-        </button>
-
-        {/* Week View */}
-        <button
-          onClick={() => setViewMode('week')}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition whitespace-nowrap ${
-            viewMode === 'week'
-              ? 'bg-white/10 text-accent-primary font-bold shadow-sm'
-              : 'text-ink-muted hover:text-ink-primary'
-          }`}
-        >
-          <Columns3 className="w-3.5 h-3.5" />
-          <span>هفتگی</span>
-        </button>
+        {NAV_TABS.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = viewMode === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setViewMode(tab.id as any)}
+              className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap text-xs ${
+                isActive ? 'text-white font-bold' : 'text-ink-muted hover:text-ink-primary'
+              }`}
+            >
+              {isActive && (
+                <motion.div
+                  layoutId="headerActiveTab"
+                  className="absolute inset-0 bg-accent-primary rounded-lg shadow-sm"
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                />
+              )}
+              <Icon className="w-3.5 h-3.5 relative z-10" />
+              <span className="relative z-10">{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* ========================================================

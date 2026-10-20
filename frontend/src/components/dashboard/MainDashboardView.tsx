@@ -68,12 +68,30 @@ export const MainDashboardView: React.FC = () => {
     ? `${dayOfWeek}، ${formatToPersianDigits(jDate.jd)} ${PERSIAN_MONTHS[jDate.jm - 1]} ${formatToPersianDigits(jDate.jy)}`
     : dateObj.toLocaleDateString('fa-IR', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
+  const selectedTaskId = useAppStore((s) => s.selectedTaskId);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'mit'>('all');
+  const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
+
   // Today's tasks
   const todayTasks = tasks.filter((t) => t.date === selectedDate);
   const completedTasks = todayTasks.filter((t) => t.status === 'completed');
   const pendingTasks = todayTasks.filter((t) => t.status !== 'completed');
   const mitTasks = todayTasks.filter((t) => t.isMIT);
-  const currentOrNextTask = pendingTasks.find((t) => t.id === activeTaskId) || pendingTasks[0];
+
+  // Filtered tasks for agenda and widgets
+  const filteredTodayTasks = todayTasks.filter((t) => {
+    if (statusFilter === 'pending' && t.status === 'completed') return false;
+    if (statusFilter === 'completed' && t.status !== 'completed') return false;
+    if (statusFilter === 'mit' && !t.isMIT) return false;
+    if (subjectFilter && t.subjectId !== subjectFilter) return false;
+    return true;
+  });
+
+  const currentOrNextTask =
+    tasks.find((t) => t.id === selectedTaskId && t.date === selectedDate) ||
+    pendingTasks.find((t) => t.id === activeTaskId) ||
+    pendingTasks[0] ||
+    todayTasks[0];
 
   // Today's sessions & total study duration (clean, real computation)
   const todaySessions = sessions.filter((s) => s.dateKey === selectedDate);
@@ -224,6 +242,7 @@ export const MainDashboardView: React.FC = () => {
             {/* Slide to complete slider */}
             <SlideToComplete
               onComplete={() => toggleTaskCompleted(currentOrNextTask.id)}
+              onReset={() => toggleTaskCompleted(currentOrNextTask.id)}
               isCompleted={currentOrNextTask.status === 'completed'}
               label="برای تیک زدن به چپ بکشید ‹‹"
               completedLabel="آفرین! تسک کامل شد 🎉"
@@ -301,10 +320,10 @@ export const MainDashboardView: React.FC = () => {
         </div>
 
         {/* 4. Mobile Agenda Horizontal Scroll (امروز در یک نگاه) */}
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           <div className="flex items-center justify-between px-1">
             <span className="text-xs font-bold text-ink-primary">
-              تایم‌بلاک‌های امروز ({todayTasks.length})
+              تایم‌بلاک‌های امروز ({filteredTodayTasks.length})
             </span>
             <button
               onClick={() => setViewMode('day')}
@@ -314,17 +333,80 @@ export const MainDashboardView: React.FC = () => {
             </button>
           </div>
 
+          {/* Mobile Task Filter Chips */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
+            <button
+              onClick={() => { setStatusFilter('all'); setSubjectFilter(null); }}
+              className={`px-2.5 py-1 rounded-xl whitespace-nowrap transition border ${
+                statusFilter === 'all' && !subjectFilter
+                  ? 'bg-accent-primary text-white border-accent-primary font-bold shadow-sm'
+                  : 'bg-canvas-secondary border-border-subtle text-ink-muted'
+              }`}
+            >
+              همه ({todayTasks.length})
+            </button>
+            <button
+              onClick={() => setStatusFilter('pending')}
+              className={`px-2.5 py-1 rounded-xl whitespace-nowrap transition border ${
+                statusFilter === 'pending'
+                  ? 'bg-accent-primary text-white border-accent-primary font-bold shadow-sm'
+                  : 'bg-canvas-secondary border-border-subtle text-ink-muted'
+              }`}
+            >
+              در انتظار ({pendingTasks.length})
+            </button>
+            <button
+              onClick={() => setStatusFilter('completed')}
+              className={`px-2.5 py-1 rounded-xl whitespace-nowrap transition border ${
+                statusFilter === 'completed'
+                  ? 'bg-accent-primary text-white border-accent-primary font-bold shadow-sm'
+                  : 'bg-canvas-secondary border-border-subtle text-ink-muted'
+              }`}
+            >
+              انجام‌شده ({completedTasks.length})
+            </button>
+            <button
+              onClick={() => setStatusFilter('mit')}
+              className={`px-2.5 py-1 rounded-xl whitespace-nowrap transition border ${
+                statusFilter === 'mit'
+                  ? 'bg-amber-500 text-white border-amber-500 font-bold shadow-sm'
+                  : 'bg-canvas-secondary border-border-subtle text-ink-muted'
+              }`}
+            >
+              طلایی MIT ({mitTasks.length})
+            </button>
+            {subjects.map((subj) => (
+              <button
+                key={subj.id}
+                onClick={() => setSubjectFilter(subjectFilter === subj.id ? null : subj.id)}
+                className={`px-2.5 py-1 rounded-xl whitespace-nowrap transition border flex items-center gap-1 ${
+                  subjectFilter === subj.id
+                    ? 'border-transparent text-white font-bold shadow-sm'
+                    : 'bg-canvas-secondary border-border-subtle text-ink-muted'
+                }`}
+                style={{
+                  backgroundColor: subjectFilter === subj.id ? subj.color : undefined,
+                }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: subj.color }} />
+                <span>{subj.name}</span>
+              </button>
+            ))}
+          </div>
+
           <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none snap-x">
-            {todayTasks.length === 0 ? (
+            {filteredTodayTasks.length === 0 ? (
               <div className="w-full p-4 rounded-2xl bg-canvas-elevated border border-border-subtle text-center text-xs text-ink-muted">
-                هنوز تسکی برای امروز تعریف نکرده‌اید. با دکمه + اضافه کنید!
+                موردی مطابق با فیلتر انتخابی برای امروز یافت نشد.
               </div>
             ) : (
-              todayTasks.map((t) => (
+              filteredTodayTasks.map((t) => (
                 <div
                   key={t.id}
                   onClick={() => selectTask(t.id)}
-                  className={`min-w-[200px] max-w-[220px] p-3 rounded-2xl border transition snap-start flex flex-col justify-between space-y-2 ${
+                  className={`min-w-[200px] max-w-[220px] p-3 rounded-2xl border transition snap-start flex flex-col justify-between space-y-2 cursor-pointer ${
+                    t.id === currentOrNextTask?.id ? 'ring-2 ring-accent-primary' : ''
+                  } ${
                     t.status === 'completed'
                       ? 'bg-canvas-secondary/50 border-border-subtle opacity-60'
                       : 'bg-canvas-elevated border-border-highlight shadow-sm'
@@ -602,13 +684,47 @@ export const MainDashboardView: React.FC = () => {
               </button>
             </div>
 
+            {/* Quick Filter Tabs for Desktop Agenda */}
+            <div className="flex items-center gap-1.5 pb-1 border-b border-border-subtle/50 text-[11px]">
+              <button
+                onClick={() => setStatusFilter('all')}
+                className={`px-2 py-0.5 rounded-lg transition ${
+                  statusFilter === 'all'
+                    ? 'bg-accent-primary text-white font-bold'
+                    : 'text-ink-muted hover:text-ink-primary'
+                }`}
+              >
+                همه ({todayTasks.length})
+              </button>
+              <button
+                onClick={() => setStatusFilter('pending')}
+                className={`px-2 py-0.5 rounded-lg transition ${
+                  statusFilter === 'pending'
+                    ? 'bg-accent-primary text-white font-bold'
+                    : 'text-ink-muted hover:text-ink-primary'
+                }`}
+              >
+                باقی‌مانده ({pendingTasks.length})
+              </button>
+              <button
+                onClick={() => setStatusFilter('completed')}
+                className={`px-2 py-0.5 rounded-lg transition ${
+                  statusFilter === 'completed'
+                    ? 'bg-accent-primary text-white font-bold'
+                    : 'text-ink-muted hover:text-ink-primary'
+                }`}
+              >
+                انجام‌شده ({completedTasks.length})
+              </button>
+            </div>
+
             <div className="space-y-2 flex-1 max-h-56 overflow-y-auto pr-1">
-              {todayTasks.length === 0 ? (
+              {filteredTodayTasks.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-xs text-ink-muted text-center p-4">
-                  هیچ تسکی برای این تاریخ ثبت نشده است.
+                  موردی مطابق با فیلتر انتخابی برای این تاریخ وجود ندارد.
                 </div>
               ) : (
-                todayTasks.map((t) => (
+                filteredTodayTasks.map((t) => (
                   <div
                     key={t.id}
                     onClick={() => selectTask(t.id)}

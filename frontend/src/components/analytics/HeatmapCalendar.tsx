@@ -45,6 +45,19 @@ export const HeatmapCalendar: React.FC = () => {
     }
   };
 
+  // Compute real monthly focus hours (last 30 days) from actual recorded sessions
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const monthSessions = sessions.filter((s) => {
+    try {
+      return new Date(s.startedAt) >= thirtyDaysAgo;
+    } catch {
+      return false;
+    }
+  });
+  const monthTotalSecs = monthSessions.reduce((acc, s) => acc + s.durationSeconds, 0);
+  const monthHours = Math.round((monthTotalSecs / 3600) * 10) / 10;
+  const totalSessionsCount = sessions.length;
+
   return (
     <div className="p-4 md:p-6 rounded-squircle-lg bg-canvas-elevated border border-border-subtle space-y-4">
       {/* Top Stats Cards */}
@@ -67,9 +80,9 @@ export const HeatmapCalendar: React.FC = () => {
           </div>
           <div>
             <div className="text-base md:text-lg font-black text-ink-primary tabular-nums">
-              {formatToPersianDigits(84)} ساعت
+              {formatToPersianDigits(monthHours)} ساعت
             </div>
-            <div className="text-[11px] text-ink-muted">کل تمرکز این ماه</div>
+            <div className="text-[11px] text-ink-muted">کل تمرکز ۳۰ روز گذشته</div>
           </div>
         </div>
 
@@ -79,9 +92,9 @@ export const HeatmapCalendar: React.FC = () => {
           </div>
           <div>
             <div className="text-base md:text-lg font-black text-ink-primary tabular-nums">
-              رتبه ۱۲
+              {formatToPersianDigits(totalSessionsCount)} سشن
             </div>
-            <div className="text-[11px] text-ink-muted">رنکینگ ملی YPT</div>
+            <div className="text-[11px] text-ink-muted">سشن‌های تمرکز ثبت‌شده</div>
           </div>
         </div>
       </div>

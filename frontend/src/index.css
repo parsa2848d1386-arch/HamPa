@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Mindful Light Mode (Sunsama / Structured Inspired) */
+    --bg-canvas: #FAF9F6;
+    --bg-surface-elevated: #FFFFFF;
+    --bg-surface-secondary: #F3F1EC;
+    --bg-glass: rgba(250, 249, 246, 0.82);
+    --text-primary: #111111;
+    --text-muted: #575B5F;
+    --text-subtle: #85898D;
+    --accent-primary: #ff4700;
+    --accent-hover: #e03e00;
+    --accent-subtle: rgba(255, 71, 0, 0.08);
+    --border-subtle: rgba(0, 0, 0, 0.08);
+    --border-highlight: rgba(0, 0, 0, 0.15);
+  }
+
+  .dark {
+    /* Precision Dark Mode (Default Desktop / Night Study - Cron Inspired) */
+    --bg-canvas: #161412;
+    --bg-surface-elevated: #0f0d0a;
+    --bg-surface-secondary: #211e1a;
+    --bg-glass: rgba(22, 20, 18, 0.72);
+    --text-primary: #ffffff;
+    --text-muted: #cccccc;
+    --text-subtle: #8e8b86;
+    --accent-primary: #ff4700;
+    --accent-hover: #ff5e1e;
+    --accent-subtle: rgba(255, 71, 0, 0.15);
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-highlight: rgba(255, 255, 255, 0.18);
+  }
+
+  * {
+    border-color: var(--border-subtle);
+  }
+
+  html {
+    font-feature-settings: "ss01";
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    min-height: 100vh;
+    font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  /* Mandatory tabular numerals for all timers, heatmaps, and time grids */
+  .tabular-nums,
+  .timer-display,
+  .time-slot,
+  .timetable-hour,
+  .heatmap-cell {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Liquid Glass Translucency */
+.liquid-glass {
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--border-subtle);
+}
+
+/* 1px Structural Grid Borders */
+.grid-border {
+  border-color: var(--border-subtle);
+}
+
+/* Custom Minimal Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(142, 139, 134, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(142, 139, 134, 0.5);
+}
+
+/* Fluid responsive typography helpers */
+@media (max-width: 600px) {
+  .touch-target {
+    min-height: 48px;
+    min-width: 48px;
+  }
+}

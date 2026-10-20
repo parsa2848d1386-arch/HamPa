@@ -1,0 +1,60 @@
+name: hampa
+description: "HamPA (هم‌پا) - Hybrid Notion Workspace & YPT Focus Planner"
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^2.0.0
+
+  # State Management & Architecture
+  flutter_bloc: ^9.1.1
+  provider: ^6.1.5
+  go_router: ^18.1.0
+
+  # Local-First SQLite Database (Notion & YPT Core)
+  drift: ^2.24.0
+  drift_flutter: ^0.2.0
+  path_provider: ^2.1.5
+  path: ^1.9.0
+  shared_preferences: ^2.5.6
+
+  # Notion Rich Block Formatting
+  flutter_math_fork: ^0.7.4
+  flutter_highlight: ^0.7.0
+  flutter_markdown: ^0.7.7
+
+  # YPT Timetable, Sound & Sensors
+  sensors_plus: ^7.1.1
+  audioplayers: ^6.8.1
+  table_calendar: ^3.3.0
+  fl_chart: ^1.2.0
+
+  # Social Presence & Utilities
+  web_socket_channel: ^3.0.3
+  uuid: ^4.5.1
+  intl: ^0.20.2
+
+  # Firebase Core, Auth & Offline Cloud Firestore
+  firebase_core: ^3.12.1
+  cloud_firestore: ^5.6.5
+  firebase_auth: ^5.5.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  build_runner: ^2.4.15
+  drift_dev: ^2.24.0
+  bloc_test: ^10.0.0
+  mocktail: ^1.0.5
+  test: ^1.25.8
+  sqlite3: ^2.4.6
+
+flutter:
+  uses-material-design: true

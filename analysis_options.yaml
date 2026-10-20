@@ -1,0 +1,26 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - "build/**"
+    - ".dart_tool/**"
+    - "android/**"
+    - "ios/**"
+    - "web/**"
+    - "windows/**"
+    - "linux/**"
+    - "macos/**"
+    - ".agents/**"
+    - "**/*.g.dart"
+    - "test/e2e/**"
+  strong-mode:
+    implicit-casts: true
+    implicit-dynamic: true
+  errors:
+    invalid_annotation_target: ignore
+
+linter:
+  rules:
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    avoid_print: false

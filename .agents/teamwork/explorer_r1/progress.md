@@ -1,0 +1,41 @@
+# Progress — explorer_r1
+
+- Status: Completed
+- Last visited: 2026-10-17T12:37:00Z
+- Milestone: R1: Workspace & Relational Database (Milestones 1 & 2)
+
+## Steps
+- [x] Record parent dispatch message to DISPATCH.md
+- [x] Create BRIEFING.md and progress.md
+- [x] Read authoritative project requirements:
+  - [x] ORIGINAL_REQUEST.md
+  - [x] PROJECT.md
+  - [x] CHECKPOINT_STATE.md
+- [x] Run static analysis:
+  - [x] flutter analyze: 0 errors, 0 warnings, 0 lints
+- [x] Inspect workspace editor & page tree:
+  - [x] lib/features/workspace_editor/
+  - [x] Page tree hierarchy, Base-36 LexoRank, cyclic parent-child checks
+  - [x] Block editor rich media renderers (text, checklists, callouts, toggles, syntax code, KaTeX math)
+  - [x] Slash menu block insertion, auto-save debounce & async execution
+- [x] Inspect relational database & 6 views:
+  - [x] lib/core/database/ & lib/features/workspace_database/
+  - [x] 12 pure Dart entities & SQLite Drift tables/DAOs
+  - [x] 6 views (Table, Kanban, Calendar, Timeline/Gantt, List, Gallery) & state synchronization
+  - [x] Formula AST evaluator (arithmetic, strings, dates, logic, error resilience #CYCLE!, #DIV/0!)
+  - [x] Rollup aggregations across relations
+- [x] Inspect test coverage & execute tests:
+  - [x] test/unit/formula_engine_test.dart (Passed)
+  - [x] test/unit/database_engine_test.dart (Passed)
+  - [x] test/unit/fractional_indexer_test.dart (Passed)
+  - [x] test/unit/page_tree_utils_test.dart (Passed)
+  - [x] test/unit/drift_database_test.dart (Passed)
+  - [x] test/unit/adversarial_m1_stress_test.dart (Passed)
+  - [x] test/unit/m2_m3_combined_test.dart (Passed)
+  - [x] test/widget/block_editor_test.dart (Passed)
+  - [x] test/widget/block_editor_adversarial_test.dart (28/28 Passed)
+  - [x] test/widget/page_tree_test.dart (Passed)
+  - [x] test/widget/database_views_test.dart (Passed)
+  - [x] Diagnostic on block_editor_deep_challenge_test.dart (Identified NativeDatabase.memory pumpAndSettle isolate hang vs fake repo)
+- [x] Synthesize findings and write report_r1.md & handoff.md
+- [x] Notify parent orchestrator via send_message

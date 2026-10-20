@@ -1,0 +1,22 @@
+{
+  "dart.analysisExcludedFolders": [
+    "build",
+    ".dart_tool",
+    "android",
+    "ios",
+    "web",
+    "windows",
+    "linux",
+    "macos",
+    ".agents",
+    "test/e2e"
+  ],
+  "dart.analyzerAdditionalArgs": [
+    "--max-old-space-size=1024"
+  ],
+  "dart.sendTelemetry": false,
+  "dart.checkForSdkUpdates": false,
+  "dart.promptToGetPackages": false,
+  "dart.flutterCreateAndroidLanguage": "kotlin",
+  "dart.flutterCreateIosLanguage": "swift"
+}

@@ -52,5 +52,9 @@ frontend/node_modules/
 frontend/dist/
 functions/node_modules/
 functions/lib/
+# Local credentials & secrets
+GITHUB_TOKEN.txt
+*.local
+.env.local
 .gemini/
 

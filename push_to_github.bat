@@ -8,11 +8,7 @@ echo ==========================================
 set COMMIT_MSG=%~1
 if "%COMMIT_MSG%"=="" set COMMIT_MSG=بروزرسانی فایل‌ها و دیزاین هم‌پا (HamPA)
 
-git remote get-url origin >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [INFO] افزودن ریموت origin گیتهاب...
-    git remote add origin https://github.com/parsa2848d1386-arch/HamPa.git
-)
+git config http.sslVerify false
 
 echo [1/3] مرحله‌بندی فایل‌ها...
 git add .
@@ -28,4 +24,3 @@ echo ==========================================
 echo عملیات با موفقیت انجام شد!
 echo ==========================================
 pause
-

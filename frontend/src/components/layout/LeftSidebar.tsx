@@ -30,12 +30,25 @@ export const LeftSidebar: React.FC = () => {
   const tasks = useAppStore((s) => s.tasks);
   const addTask = useAppStore((s) => s.addTask);
   const selectTask = useAppStore((s) => s.selectTask);
+  const startFocusSession = useAppStore((s) => s.startFocusSession);
 
   const [quickTitle, setQuickTitle] = useState('');
 
   if (!isOpen) return null;
 
   const currentDateObj = new Date(selectedDate);
+
+  const handlePrevMonth = () => {
+    const d = new Date(currentDateObj);
+    d.setMonth(d.getMonth() - 1);
+    setSelectedDate(d.toISOString().split('T')[0]);
+  };
+
+  const handleNextMonth = () => {
+    const d = new Date(currentDateObj);
+    d.setMonth(d.getMonth() + 1);
+    setSelectedDate(d.toISOString().split('T')[0]);
+  };
   const jDate = gregorianToJalali(
     currentDateObj.getFullYear(),
     currentDateObj.getMonth() + 1,
@@ -72,14 +85,14 @@ export const LeftSidebar: React.FC = () => {
 
   return (
     <>
-      {/* Mobile Backdrop Overlay (only on < lg) */}
+      {/* Mobile Backdrop Overlay (only on < lg, below header) */}
       <div 
         onClick={toggleLeftSidebar} 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+        className="fixed inset-x-0 bottom-0 top-14 bg-black/60 backdrop-blur-sm z-30 lg:hidden"
         aria-hidden="true" 
       />
 
-      <aside className="fixed inset-y-0 right-0 z-50 w-72 lg:static lg:w-64 xl:w-72 border-l border-border-subtle bg-canvas-elevated liquid-glass flex flex-col h-full overflow-hidden select-none shadow-2xl lg:shadow-none transition-transform duration-300">
+      <aside className="fixed inset-y-0 right-0 z-40 w-72 lg:static lg:w-64 xl:w-72 border-l border-border-subtle bg-canvas-elevated liquid-glass flex flex-col h-full overflow-hidden select-none shadow-2xl lg:shadow-none transition-transform duration-300">
         {/* Mini Month Header with Mobile Close Button */}
         <div className="p-3 border-b border-border-subtle">
           <div className="flex items-center justify-between pb-2">
@@ -90,16 +103,29 @@ export const LeftSidebar: React.FC = () => {
             </div>
             
             <div className="flex items-center gap-1 text-ink-muted">
-              <button className="p-1 hover:bg-white/5 rounded">
+              <button 
+                type="button"
+                onClick={handlePrevMonth}
+                className="p-1 hover:bg-white/10 rounded cursor-pointer transition"
+                title="ماه قبل"
+                aria-label="ماه قبل"
+              >
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
-              <button className="p-1 hover:bg-white/5 rounded">
+              <button 
+                type="button"
+                onClick={handleNextMonth}
+                className="p-1 hover:bg-white/10 rounded cursor-pointer transition"
+                title="ماه بعد"
+                aria-label="ماه بعد"
+              >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
               {/* Close button on mobile */}
               <button 
+                type="button"
                 onClick={toggleLeftSidebar}
-                className="lg:hidden p-1 mr-1 hover:bg-white/10 rounded text-ink-muted hover:text-ink-primary"
+                className="lg:hidden p-1 mr-1 hover:bg-white/10 rounded text-ink-muted hover:text-ink-primary cursor-pointer"
                 title="بستن سایدبار"
               >
                 <X className="w-4 h-4" />
@@ -121,12 +147,13 @@ export const LeftSidebar: React.FC = () => {
             return (
               <button
                 key={d}
+                type="button"
                 onClick={() => {
-                  const target = new Date();
+                  const target = new Date(currentDateObj);
                   target.setDate(d);
                   setSelectedDate(target.toISOString().split('T')[0]);
                 }}
-                className={`h-7 rounded-precision flex items-center justify-center font-mono text-[11px] transition ${
+                className={`h-7 rounded-precision flex items-center justify-center font-mono text-[11px] transition cursor-pointer ${
                   isToday
                     ? 'bg-accent-primary text-white font-bold shadow-sm'
                     : 'text-ink-muted hover:bg-white/5 hover:text-ink-primary'
@@ -159,9 +186,12 @@ export const LeftSidebar: React.FC = () => {
           </span>
           <div className="space-y-1">
             {subjects.map((subj) => (
-              <div
+              <button
                 key={subj.id}
-                className="flex items-center justify-between px-2.5 py-1.5 rounded-precision hover:bg-white/5 text-xs text-ink-muted hover:text-ink-primary cursor-pointer transition"
+                type="button"
+                onClick={() => startFocusSession(subj.id)}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-precision hover:bg-white/5 text-xs text-ink-muted hover:text-ink-primary cursor-pointer transition active:scale-98"
+                title={`شروع جلسه تمرکز YPT برای ${subj.name}`}
               >
                 <div className="flex items-center gap-2">
                   <span
@@ -173,7 +203,7 @@ export const LeftSidebar: React.FC = () => {
                 <span className="text-[10px] font-mono text-ink-subtle">
                   {Math.round(subj.totalSecondsStudied / 3600)}h
                 </span>
-              </div>
+              </button>
             ))}
           </div>
         </div>

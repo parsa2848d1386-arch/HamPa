@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, 
@@ -6,42 +6,33 @@ import {
   Calendar, 
   Clock, 
   Tag, 
-  Flame, 
   Sparkles, 
   Check, 
-  Sliders, 
   Zap, 
-  Repeat, 
-  Bell, 
-  CheckSquare, 
+  ChevronDown,
   Trash2,
-  FileText,
-  Timer,
-  Grid
+  CheckCircle2,
+  ListPlus,
+  Star,
+  CornerDownLeft
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
-import type { Priority, EnergyLevel, RecurrenceType } from '../../types';
+import type { Priority } from '../../types';
+import { formatToPersianDigits } from '../../lib/calendarUtils';
 
-const PRESET_DURATIONS = [
-  { label: '۱۵ د', value: 15 },
-  { label: '۲۵ د (پومودورو)', value: 25 },
-  { label: '۴۵ د', value: 45 },
-  { label: '۶۰ د (۱ س)', value: 60 },
-  { label: '۹۰ د (۱.۵ س)', value: 90 },
-  { label: '۱۲۰ د (۲ س)', value: 120 },
+const DURATION_PRESETS = [
+  { label: '۱۵د', value: 15 },
+  { label: '۲۵د پومودورو', value: 25 },
+  { label: '۴۵د استاندارد', value: 45 },
+  { label: '۶۰د (۱ ساعت)', value: 60 },
+  { label: '۹۰د عمیق', value: 90 },
 ];
 
-const PRESET_TAGS = [
-  'مطالعه', 'تست‌زنی', 'مرور', 'پروژه', 'کدنویسی', 'کنکور', 'تمرین', 'کتاب', 'سلامت'
-];
-
-const QUICK_TEMPLATES = [
-  { label: 'مطالعه عمیق', icon: '📖', duration: 60, priority: 'high' as Priority, energy: 'high' as EnergyLevel, tag: 'مطالعه', pomodoros: 2 },
-  { label: 'تست‌زنی زمان‌دار', icon: '⏱️', duration: 45, priority: 'urgent' as Priority, energy: 'high' as EnergyLevel, tag: 'تست‌زنی', pomodoros: 2 },
-  { label: 'مرور فلش‌کارت', icon: '🧠', duration: 25, priority: 'medium' as Priority, energy: 'medium' as EnergyLevel, tag: 'مرور', pomodoros: 1 },
-  { label: 'حل تمرین', icon: '✍️', duration: 45, priority: 'medium' as Priority, energy: 'medium' as EnergyLevel, tag: 'تمرین', pomodoros: 2 },
-  { label: 'پروژه و کدنویسی', icon: '💻', duration: 90, priority: 'high' as Priority, energy: 'high' as EnergyLevel, tag: 'پروژه', pomodoros: 3 },
-  { label: 'استراحت آگاهانه', icon: '☕', duration: 15, priority: 'low' as Priority, energy: 'low' as EnergyLevel, tag: 'سلامت', pomodoros: 1 },
+const PRIORITY_OPTIONS: { id: Priority; label: string; color: string }[] = [
+  { id: 'low', label: 'عادی', color: '#10B981' },
+  { id: 'medium', label: 'متوسط', color: '#3B82F6' },
+  { id: 'high', label: 'مهم', color: '#F59E0B' },
+  { id: 'urgent', label: 'فوری Q1', color: '#EF4444' },
 ];
 
 export const CreateTaskModal: React.FC = () => {
@@ -51,90 +42,78 @@ export const CreateTaskModal: React.FC = () => {
   const subjects = useAppStore((s) => s.subjects);
   const selectedDate = useAppStore((s) => s.selectedDate);
 
-  // Mode: 'casual' (simple) or 'pro' (advanced)
-  const [mode, setMode] = useState<'casual' | 'pro'>('casual');
-
-  // Common Fields
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [subjectId, setSubjectId] = useState(subjects[0]?.id || '');
   const [targetDate, setTargetDate] = useState(selectedDate);
-  const [startTime, setStartTime] = useState('09:00');
+  const [startTime, setStartTime] = useState('');
   const [duration, setDuration] = useState(45);
   const [priority, setPriority] = useState<Priority>('medium');
   const [isMIT, setIsMIT] = useState(false);
-  const [tags, setTags] = useState<string[]>(['مطالعه']);
-  const [tagInput, setTagInput] = useState('');
-
-  // Pro Fields
-  const [energyLevel, setEnergyLevel] = useState<EnergyLevel>('high');
-  const [estimatedPomodoros, setEstimatedPomodoros] = useState(2);
-  const [recurrence, setRecurrence] = useState<RecurrenceType>('none');
-  const [reminderMinutes, setReminderMinutes] = useState(15);
+  const [showSubtasks, setShowSubtasks] = useState(false);
   const [subtasks, setSubtasks] = useState<{ id: string; title: string; completed: boolean }[]>([]);
   const [subtaskInput, setSubtaskInput] = useState('');
 
+  // Dropdown popovers
+  const [activePopover, setActivePopover] = useState<'subject' | 'duration' | 'priority' | 'time' | null>(null);
+
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const subtaskInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setTargetDate(selectedDate);
+      if (subjects.length > 0 && !subjectId) {
+        setSubjectId(subjects[0].id);
+      }
+      setTimeout(() => {
+        titleInputRef.current?.focus();
+      }, 50);
+    } else {
+      // Reset form
+      setTitle('');
+      setDescription('');
+      setStartTime('');
+      setDuration(45);
+      setPriority('medium');
+      setIsMIT(false);
+      setSubtasks([]);
+      setShowSubtasks(false);
+      setActivePopover(null);
+    }
+  }, [isOpen, selectedDate, subjects]);
+
   if (!isOpen) return null;
 
-  const selectedSubject = subjects.find((s) => s.id === subjectId) || subjects[0];
-
-  const applyTemplate = (t: typeof QUICK_TEMPLATES[0]) => {
-    setTitle(t.label);
-    setDuration(t.duration);
-    setPriority(t.priority);
-    setEnergyLevel(t.energy);
-    setEstimatedPomodoros(t.pomodoros);
-    if (!tags.includes(t.tag)) {
-      setTags([...tags, t.tag]);
-    }
+  const currentSubject = subjects.find((s) => s.id === subjectId) || subjects[0] || {
+    id: 'default',
+    name: 'عمومی',
+    color: '#FF4700'
   };
 
-  // Calculate approximate end time
-  const calculateEndTime = (start: string, durMin: number) => {
-    if (!start) return '';
-    const [h, m] = start.split(':').map(Number);
-    const totalMinutes = h * 60 + m + durMin;
-    const endH = Math.floor(totalMinutes / 60) % 24;
-    const endM = totalMinutes % 60;
-    return `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
-  };
+  const currentPriorityObj = PRIORITY_OPTIONS.find((p) => p.id === priority) || PRIORITY_OPTIONS[1];
 
-  const handleAddTag = (tagToAdd: string) => {
-    if (!tags.includes(tagToAdd)) {
-      setTags([...tags, tagToAdd]);
-    }
-  };
-
-  const handleCustomTagKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && tagInput.trim()) {
-      e.preventDefault();
-      handleAddTag(tagInput.trim());
-      setTagInput('');
-    }
-  };
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter((t) => t !== tagToRemove));
-  };
-
-  const handleAddSubtask = (e: React.FormEvent | React.KeyboardEvent) => {
-    e.preventDefault();
+  const handleAddSubtask = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!subtaskInput.trim()) return;
     setSubtasks([
       ...subtasks,
-      { id: `st-${Date.now()}-${Math.random()}`, title: subtaskInput.trim(), completed: false },
+      { id: `st-${Date.now()}`, title: subtaskInput.trim(), completed: false }
     ]);
     setSubtaskInput('');
+    subtaskInputRef.current?.focus();
   };
 
   const handleRemoveSubtask = (id: string) => {
     setSubtasks(subtasks.filter((st) => st.id !== id));
   };
 
-  const handleSetTomorrow = () => {
-    const d = new Date(selectedDate);
-    d.setDate(d.getDate() + 1);
-    setTargetDate(d.toISOString().split('T')[0]);
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setOpen(false);
+    } else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      handleSubmit(e);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -147,630 +126,373 @@ export const CreateTaskModal: React.FC = () => {
       date: targetDate || selectedDate,
       startTime: startTime || undefined,
       durationMinutes: Number(duration) || 45,
-      color: selectedSubject?.color || '#FF4700',
-      subjectId: selectedSubject?.id,
+      color: currentSubject?.color || '#FF4700',
+      subjectId: currentSubject?.id,
       priority,
       status: 'todo',
       isMIT,
-      tags,
+      tags: [currentSubject?.name || 'مطالعه'],
       subtasks,
       blocks: [],
-      energyLevel: mode === 'pro' ? energyLevel : undefined,
-      estimatedPomodoros: mode === 'pro' ? estimatedPomodoros : undefined,
-      recurrence: mode === 'pro' ? recurrence : undefined,
-      reminderMinutesBefore: mode === 'pro' ? reminderMinutes : undefined,
     });
 
-    // Reset form
-    setTitle('');
-    setDescription('');
-    setTags(['مطالعه']);
-    setIsMIT(false);
-    setSubtasks([]);
     setOpen(false);
+  };
+
+  const isToday = targetDate === selectedDate;
+
+  const handleSetTomorrow = () => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + 1);
+    setTargetDate(d.toISOString().split('T')[0]);
   };
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 select-none overflow-y-auto">
-        {/* Backdrop */}
+      <div 
+        onKeyDown={handleKeyDown}
+        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 select-none"
+      >
+        {/* Soft Dim Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={() => setOpen(false)}
-          className="fixed inset-0 bg-black/75 backdrop-blur-md"
+          className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-md"
         />
 
-        {/* Modal Sheet */}
+        {/* Linear / Things 3 Inspired Floating Card */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
+          initial={{ opacity: 0, scale: 0.96, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-          className="relative z-10 w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-3xl bg-canvas-elevated liquid-glass border border-border-subtle shadow-2xl p-5 md:p-6"
+          exit={{ opacity: 0, scale: 0.96, y: 12 }}
+          transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+          className="relative z-10 w-full max-w-lg rounded-3xl bg-canvas-elevated/95 backdrop-blur-2xl border border-white/10 dark:border-white/15 shadow-2xl p-5 md:p-6 space-y-4"
         >
-          {/* Header & Mode Switcher */}
-          <div className="flex items-center justify-between pb-4 border-b border-border-subtle">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-2xl bg-accent-primary text-white flex items-center justify-center shadow-needle">
-                <Plus className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-ink-primary">
-                  افزودن فعالیت و تسک جدید
-                </h3>
-                <p className="text-xs text-ink-muted">
-                  {mode === 'casual' ? 'ثبت سریع و قالب‌های آماده برای کاربران عادی' : 'تنظیمات تخصصی ماتریس آیزنهاور، زمان‌بندی و زیرتسک‌ها'}
-                </p>
-              </div>
-            </div>
-
-            {/* Mode Toggle Button */}
+          {/* Header Row: Subject Badge & Close */}
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="flex items-center bg-canvas-secondary p-1 rounded-xl border border-border-subtle text-xs">
-                <button
-                  type="button"
-                  onClick={() => setMode('casual')}
-                  className={`px-3 py-1 rounded-lg font-bold transition ${
-                    mode === 'casual'
-                      ? 'bg-accent-primary text-white shadow-sm'
-                      : 'text-ink-muted hover:text-ink-primary'
-                  }`}
-                >
-                  عادی
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMode('pro')}
-                  className={`px-3 py-1 rounded-lg font-bold transition flex items-center gap-1 ${
-                    mode === 'pro'
-                      ? 'bg-accent-primary text-white shadow-sm'
-                      : 'text-ink-muted hover:text-ink-primary'
-                  }`}
-                >
-                  <Sliders className="w-3.5 h-3.5" />
-                  <span>حرفه‌ای</span>
-                </button>
-              </div>
+              <span 
+                className="w-2.5 h-2.5 rounded-full shadow-needle animate-pulse" 
+                style={{ backgroundColor: currentSubject.color }}
+              />
+              <span className="text-xs font-bold text-ink-muted">
+                تسک جدید در «{currentSubject.name}»
+              </span>
+            </div>
 
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-ink-muted hover:text-ink-primary transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Quick Template Chips */}
-          <div className="pt-3 pb-1 border-b border-border-subtle">
-            <div className="text-[11px] font-bold text-ink-muted mb-1.5 flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-accent-primary" />
-              <span>الگوهای آماده برای ثبت فوری در ۲ ثانیه:</span>
-            </div>
-            <div className="flex flex-wrap gap-1.5 pb-2">
-              {QUICK_TEMPLATES.map((tmpl) => (
-                <button
-                  key={tmpl.label}
-                  type="button"
-                  onClick={() => applyTemplate(tmpl)}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs bg-canvas-secondary hover:bg-accent-primary/10 hover:border-accent-primary/40 border border-border-subtle text-ink-primary transition active:scale-95"
-                >
-                  <span>{tmpl.icon}</span>
-                  <span className="font-semibold">{tmpl.label}</span>
-                  <span className="text-[10px] text-ink-muted font-mono">{tmpl.duration}د</span>
-                </button>
-              ))}
-            </div>
+            <button
+              onClick={() => setOpen(false)}
+              className="p-1 rounded-xl text-ink-muted hover:text-ink-primary hover:bg-white/10 transition cursor-pointer"
+              aria-label="بستن"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="py-4 space-y-4">
-            {/* Title */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            
+            {/* 1. Large Fluid Title Input */}
             <div>
-              <label className="block text-xs font-bold text-ink-muted mb-1.5">
-                عنوان فعالیت:
-              </label>
               <input
+                ref={titleInputRef}
                 type="text"
-                autoFocus
-                required
-                placeholder="مثال: مطالعه و تست‌زنی حسابان، آماده‌سازی گزارش..."
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full bg-canvas-secondary border border-border-subtle focus:border-accent-primary rounded-xl px-3.5 py-2.5 text-sm text-ink-primary outline-none transition"
+                placeholder="عنوان فعالیت... (مثلاً: حل ۲۰ تست حسابان)"
+                className="w-full bg-transparent border-0 text-base md:text-lg font-black text-ink-primary placeholder:text-ink-muted/40 focus:outline-none focus:ring-0 p-0"
               />
             </div>
 
-            {/* Target Date Selector */}
+            {/* 2. Optional Lightweight Description / Notes */}
             <div>
-              <label className="block text-xs font-bold text-ink-muted mb-1 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-accent-primary" />
-                <span>تاریخ اجرای فعالیت:</span>
-              </label>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setTargetDate(selectedDate)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
-                    targetDate === selectedDate
-                      ? 'bg-accent-primary text-white border-accent-primary shadow-sm'
-                      : 'bg-canvas-secondary border-border-subtle text-ink-muted'
-                  }`}
-                >
-                  امروز
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSetTomorrow}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
-                    targetDate !== selectedDate
-                      ? 'bg-accent-primary text-white border-accent-primary shadow-sm'
-                      : 'bg-canvas-secondary border-border-subtle text-ink-muted'
-                  }`}
-                >
-                  فردا
-                </button>
-                <input
-                  type="date"
-                  value={targetDate}
-                  onChange={(e) => setTargetDate(e.target.value)}
-                  className="flex-1 bg-canvas-secondary border border-border-subtle rounded-xl px-3 py-1.5 text-xs text-ink-primary font-mono outline-none"
-                />
-              </div>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="یادداشت تکمیلی یا منبع مطالعه (اختیاری)..."
+                rows={2}
+                className="w-full bg-canvas-secondary/50 border border-border-subtle rounded-2xl p-3 text-xs text-ink-primary placeholder:text-ink-muted/40 focus:outline-none focus:border-accent-primary/60 transition resize-none"
+              />
             </div>
 
-            {/* Subject Selector */}
-            <div>
-              <label className="block text-xs font-bold text-ink-muted mb-1.5">
-                موضوع یا درس:
-              </label>
-              <div className="flex flex-wrap gap-1.5">
-                {subjects.map((subj) => (
-                  <button
-                    key={subj.id}
-                    type="button"
-                    onClick={() => setSubjectId(subj.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition border ${
-                      subjectId === subj.id
-                        ? 'border-transparent text-white shadow-sm font-bold scale-[1.02]'
-                        : 'border-border-subtle bg-white/5 text-ink-muted hover:text-ink-primary'
-                    }`}
-                    style={{
-                      backgroundColor: subjectId === subj.id ? subj.color : undefined,
-                    }}
-                  >
-                    <span
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: subj.color }}
-                    />
-                    <span>{subj.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* 3. Sleek Smart Pills Row (One-tap customization) */}
+            <div className="flex items-center gap-1.5 flex-wrap pt-1">
+              
+              {/* Subject Selector Pill */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setActivePopover(activePopover === 'subject' ? null : 'subject')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-canvas-secondary hover:bg-canvas-secondary/80 border border-border-subtle text-xs font-bold text-ink-primary transition cursor-pointer"
+                >
+                  <span 
+                    className="w-2 h-2 rounded-full flex-shrink-0" 
+                    style={{ backgroundColor: currentSubject.color }}
+                  />
+                  <span>{currentSubject.name}</span>
+                  <ChevronDown className="w-3 h-3 text-ink-muted opacity-60" />
+                </button>
 
-            {/* Duration Quick Chips & Custom Input */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-bold text-ink-muted flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-accent-primary" />
-                  <span>مدت زمان:</span>
-                </label>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono text-ink-primary font-bold">
-                    {duration} دقیقه {startTime && `(پایان: ${calculateEndTime(startTime, duration)})`}
-                  </span>
-                  <div className="flex items-center gap-1 bg-canvas-secondary border border-border-subtle rounded-lg px-2 py-0.5">
-                    <input
-                      type="number"
-                      min="5"
-                      max="480"
-                      value={duration}
-                      onChange={(e) => setDuration(Math.max(5, Number(e.target.value)))}
-                      className="w-12 bg-transparent text-center font-mono text-xs font-bold text-ink-primary outline-none"
-                    />
-                    <span className="text-[10px] text-ink-muted">دقیقه</span>
+                {/* Subject Dropdown */}
+                {activePopover === 'subject' && (
+                  <div className="absolute top-full mt-1.5 right-0 z-30 w-48 rounded-2xl bg-canvas-elevated border border-border-subtle shadow-xl p-1.5 space-y-0.5">
+                    {subjects.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => {
+                          setSubjectId(s.id);
+                          setActivePopover(null);
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition cursor-pointer ${
+                          s.id === currentSubject.id 
+                            ? 'bg-accent-primary/10 text-accent-primary font-bold' 
+                            : 'hover:bg-white/5 text-ink-primary'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                          <span>{s.name}</span>
+                        </div>
+                        {s.id === currentSubject.id && <Check className="w-3.5 h-3.5" />}
+                      </button>
+                    ))}
                   </div>
-                </div>
+                )}
               </div>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-                {PRESET_DURATIONS.map((dur) => (
-                  <button
-                    key={dur.value}
-                    type="button"
-                    onClick={() => setDuration(dur.value)}
-                    className={`py-1.5 px-2 rounded-xl text-xs font-mono font-semibold border transition ${
-                      duration === dur.value
-                        ? 'bg-accent-primary border-accent-primary text-white shadow-needle'
-                        : 'bg-canvas-secondary border-border-subtle text-ink-muted hover:text-ink-primary'
-                    }`}
-                  >
-                    {dur.label}
-                  </button>
-                ))}
-              </div>
-            </div>
 
-            {/* Time Slot & Priority */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-bold text-ink-muted mb-1 flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-ink-subtle" />
-                  <span>ساعت شروع:</span>
-                </label>
+              {/* Duration Selector Pill */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setActivePopover(activePopover === 'duration' ? null : 'duration')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-canvas-secondary hover:bg-canvas-secondary/80 border border-border-subtle text-xs font-bold text-ink-primary transition cursor-pointer font-mono"
+                >
+                  <Clock className="w-3.5 h-3.5 text-accent-primary" />
+                  <span>{formatToPersianDigits(duration)} دقیقه</span>
+                  <ChevronDown className="w-3 h-3 text-ink-muted opacity-60" />
+                </button>
+
+                {/* Duration Presets Dropdown */}
+                {activePopover === 'duration' && (
+                  <div className="absolute top-full mt-1.5 right-0 z-30 w-44 rounded-2xl bg-canvas-elevated border border-border-subtle shadow-xl p-1.5 space-y-0.5">
+                    {DURATION_PRESETS.map((p) => (
+                      <button
+                        key={p.value}
+                        type="button"
+                        onClick={() => {
+                          setDuration(p.value);
+                          setActivePopover(null);
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition cursor-pointer ${
+                          p.value === duration 
+                            ? 'bg-accent-primary/10 text-accent-primary font-bold' 
+                            : 'hover:bg-white/5 text-ink-primary'
+                        }`}
+                      >
+                        <span>{p.label}</span>
+                        {p.value === duration && <Check className="w-3.5 h-3.5" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Priority Pill */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setActivePopover(activePopover === 'priority' ? null : 'priority')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-canvas-secondary hover:bg-canvas-secondary/80 border border-border-subtle text-xs font-bold text-ink-primary transition cursor-pointer"
+                >
+                  <span 
+                    className="w-2 h-2 rounded-full" 
+                    style={{ backgroundColor: currentPriorityObj.color }}
+                  />
+                  <span>{currentPriorityObj.label}</span>
+                  <ChevronDown className="w-3 h-3 text-ink-muted opacity-60" />
+                </button>
+
+                {activePopover === 'priority' && (
+                  <div className="absolute top-full mt-1.5 right-0 z-30 w-40 rounded-2xl bg-canvas-elevated border border-border-subtle shadow-xl p-1.5 space-y-0.5">
+                    {PRIORITY_OPTIONS.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          setPriority(p.id);
+                          setActivePopover(null);
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition cursor-pointer ${
+                          p.id === priority 
+                            ? 'bg-accent-primary/10 text-accent-primary font-bold' 
+                            : 'hover:bg-white/5 text-ink-primary'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
+                          <span>{p.label}</span>
+                        </div>
+                        {p.id === priority && <Check className="w-3.5 h-3.5" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Start Time Pill */}
+              <div className="flex items-center px-2.5 py-1 rounded-xl bg-canvas-secondary border border-border-subtle text-xs text-ink-muted">
+                <Clock className="w-3.5 h-3.5 ml-1 text-ink-muted opacity-60" />
                 <input
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full bg-canvas-secondary border border-border-subtle rounded-xl px-3 py-2 text-xs font-mono text-ink-primary outline-none focus:border-accent-primary"
+                  placeholder="زمان"
+                  className="bg-transparent text-ink-primary font-mono text-xs focus:outline-none cursor-pointer"
+                  title="ساعت شروع (اختیاری)"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-ink-muted mb-1 flex items-center gap-1">
-                  <Flame className="w-3.5 h-3.5 text-amber-500" />
-                  <span>اولویت تسک:</span>
-                </label>
-                <select
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value as Priority)}
-                  className="w-full bg-canvas-secondary border border-border-subtle rounded-xl px-3 py-2 text-xs text-ink-primary outline-none focus:border-accent-primary"
-                >
-                  <option value="urgent">فوری و حیاتی (Urgent - Q1)</option>
-                  <option value="high">بالا و بااهمیت (High - Q2)</option>
-                  <option value="medium">متوسط و عادی (Medium - Q3)</option>
-                  <option value="low">کم و سبک (Low - Q4)</option>
-                </select>
-              </div>
-            </div>
+              {/* Date Toggle: Today vs Tomorrow */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (isToday) {
+                    handleSetTomorrow();
+                  } else {
+                    setTargetDate(selectedDate);
+                  }
+                }}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
+                  isToday 
+                    ? 'bg-canvas-secondary text-ink-primary border-border-subtle' 
+                    : 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30'
+                }`}
+                title="تغییر تاریخ بین امروز و فردا"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>{isToday ? 'امروز' : 'فردا'}</span>
+              </button>
 
-            {/* MIT Checkbox / Button */}
-            <div className="p-2.5 rounded-xl bg-canvas-secondary border border-border-subtle flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-400" />
-                <div>
-                  <div className="text-xs font-bold text-ink-primary">
-                    ۳ اولویت طلایی روز (Sunsama MIT)
-                  </div>
-                  <div className="text-[11px] text-ink-muted">
-                    قرارگیری در بالاترین جایگاه تمرکز روز
-                  </div>
-                </div>
-              </div>
+              {/* Sunsama Golden MIT Toggle Button */}
               <button
                 type="button"
                 onClick={() => setIsMIT(!isMIT)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition flex items-center gap-1 ${
-                  isMIT
-                    ? 'bg-amber-500 border-amber-500 text-white shadow-sm'
-                    : 'border-border-subtle text-ink-muted hover:text-ink-primary'
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
+                  isMIT 
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm' 
+                    : 'bg-canvas-secondary text-ink-muted hover:text-ink-primary border-border-subtle'
                 }`}
+                title="علامت‌گذاری به عنوان اولویت طلایی روز"
               >
-                <Check className={`w-3.5 h-3.5 ${isMIT ? 'opacity-100' : 'opacity-40'}`} />
-                <span>{isMIT ? 'فعال به عنوان MIT' : 'غیرفعال'}</span>
+                <Star className={`w-3.5 h-3.5 ${isMIT ? 'fill-amber-400 text-amber-400' : ''}`} />
+                <span>اولویت طلایی MIT</span>
               </button>
             </div>
 
-            {/* PRO MODE FIELDS */}
-            {mode === 'pro' && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="space-y-4 pt-2 border-t border-border-subtle"
-              >
-                {/* Description */}
-                <div>
-                  <label className="block text-xs font-bold text-ink-muted mb-1 flex items-center gap-1">
-                    <FileText className="w-3.5 h-3.5 text-ink-subtle" />
-                    <span>توضیحات و یادداشت تکمیلی:</span>
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="نکات مهم، منابع یا صفحاتی که باید خوانده شوند..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="w-full bg-canvas-secondary border border-border-subtle focus:border-accent-primary rounded-xl p-2.5 text-xs text-ink-primary outline-none resize-none"
-                  />
-                </div>
+            {/* 4. Progressive Subtasks Checklist (Clean Disclosure) */}
+            <div className="space-y-2 pt-1 border-t border-border-subtle/50">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setShowSubtasks(!showSubtasks)}
+                  className="flex items-center gap-1.5 text-xs text-ink-muted hover:text-accent-primary font-bold transition cursor-pointer"
+                >
+                  <ListPlus className="w-3.5 h-3.5" />
+                  <span>
+                    {subtasks.length > 0 
+                      ? `${formatToPersianDigits(subtasks.length)} زیرتسک افزوده شده` 
+                      : '+ افزودن زیرتسک و مراحل'}
+                  </span>
+                </button>
+              </div>
 
-                {/* Visual Eisenhower Quadrant Selector */}
-                <div>
-                  <label className="block text-xs font-bold text-ink-muted mb-1.5 flex items-center gap-1">
-                    <Grid className="w-3.5 h-3.5 text-accent-primary" />
-                    <span>دسته‌بندی در ماتریس آیزنهاور (Eisenhower Matrix):</span>
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPriority('urgent')}
-                      className={`p-2 rounded-xl text-right border transition ${
-                        priority === 'urgent'
-                          ? 'border-red-500 bg-red-500/15 text-red-400 font-bold shadow-sm'
-                          : 'border-border-subtle bg-canvas-secondary text-ink-muted hover:text-ink-primary'
-                      }`}
-                    >
-                      <div className="text-xs flex items-center justify-between">
-                        <span>🔥 فوری و مهم (Q1)</span>
-                        <span className="text-[10px] opacity-75">اقدام فوری</span>
-                      </div>
-                      <div className="text-[10px] opacity-70 mt-0.5">بحران‌ها و کارهای با ددلاین قطعی</div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPriority('high')}
-                      className={`p-2 rounded-xl text-right border transition ${
-                        priority === 'high'
-                          ? 'border-amber-500 bg-amber-500/15 text-amber-400 font-bold shadow-sm'
-                          : 'border-border-subtle bg-canvas-secondary text-ink-muted hover:text-ink-primary'
-                      }`}
-                    >
-                      <div className="text-xs flex items-center justify-between">
-                        <span>⭐ مهم، غیرفوری (Q2)</span>
-                        <span className="text-[10px] opacity-75">برنامه‌ریزی</span>
-                      </div>
-                      <div className="text-[10px] opacity-70 mt-0.5">یادگیری عمیق، کنکور و اهداف بزرگ</div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPriority('medium')}
-                      className={`p-2 rounded-xl text-right border transition ${
-                        priority === 'medium'
-                          ? 'border-blue-500 bg-blue-500/15 text-blue-400 font-bold shadow-sm'
-                          : 'border-border-subtle bg-canvas-secondary text-ink-muted hover:text-ink-primary'
-                      }`}
-                    >
-                      <div className="text-xs flex items-center justify-between">
-                        <span>⚡ فوری، کم‌اهمیت (Q3)</span>
-                        <span className="text-[10px] opacity-75">واگذاری / تجمیع</span>
-                      </div>
-                      <div className="text-[10px] opacity-70 mt-0.5">پاسخ به پیام‌ها و کارهای جانبی</div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPriority('low')}
-                      className={`p-2 rounded-xl text-right border transition ${
-                        priority === 'low'
-                          ? 'border-emerald-500 bg-emerald-500/15 text-emerald-400 font-bold shadow-sm'
-                          : 'border-border-subtle bg-canvas-secondary text-ink-muted hover:text-ink-primary'
-                      }`}
-                    >
-                      <div className="text-xs flex items-center justify-between">
-                        <span>🌱 غیرفوری، کم‌اهمیت (Q4)</span>
-                        <span className="text-[10px] opacity-75">حذف / فراغت</span>
-                      </div>
-                      <div className="text-[10px] opacity-70 mt-0.5">استراحت، سرگرمی و وقفه</div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Energy & Pomodoro row */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-ink-muted mb-1 flex items-center gap-1">
-                      <Zap className="w-3.5 h-3.5 text-amber-400" />
-                      <span>سطح انرژی مورد نیاز:</span>
-                    </label>
-                    <div className="grid grid-cols-3 gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setEnergyLevel('high')}
-                        className={`py-1.5 px-1 rounded-lg text-xs font-bold border transition ${
-                          energyLevel === 'high' ? 'bg-amber-500 text-white border-amber-500' : 'bg-canvas-secondary border-border-subtle text-ink-muted'
-                        }`}
-                      >
-                        ⚡ بالا
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEnergyLevel('medium')}
-                        className={`py-1.5 px-1 rounded-lg text-xs font-bold border transition ${
-                          energyLevel === 'medium' ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-canvas-secondary border-border-subtle text-ink-muted'
-                        }`}
-                      >
-                        🔋 متوسط
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEnergyLevel('low')}
-                        className={`py-1.5 px-1 rounded-lg text-xs font-bold border transition ${
-                          energyLevel === 'low' ? 'bg-blue-500 text-white border-blue-500' : 'bg-canvas-secondary border-border-subtle text-ink-muted'
-                        }`}
-                      >
-                        ☕ کم
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-ink-muted mb-1 flex items-center gap-1">
-                      <Timer className="w-3.5 h-3.5 text-red-500" />
-                      <span>تخمین پومودورو (۲۵ دقیقه‌ای):</span>
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="range"
-                        min="1"
-                        max="8"
-                        value={estimatedPomodoros}
-                        onChange={(e) => setEstimatedPomodoros(Number(e.target.value))}
-                        className="flex-1 accent-accent-primary"
-                      />
-                      <span className="text-xs font-mono font-bold text-ink-primary px-2 py-1 rounded bg-canvas-secondary border border-border-subtle">
-                        {estimatedPomodoros} 🍅
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Recurrence & Reminder row */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-ink-muted mb-1 flex items-center gap-1">
-                      <Repeat className="w-3.5 h-3.5 text-ink-subtle" />
-                      <span>تکرار هوشمند:</span>
-                    </label>
-                    <select
-                      value={recurrence}
-                      onChange={(e) => setRecurrence(e.target.value as RecurrenceType)}
-                      className="w-full bg-canvas-secondary border border-border-subtle rounded-xl px-3 py-2 text-xs text-ink-primary outline-none"
-                    >
-                      <option value="none">بدون تکرار (یکباره)</option>
-                      <option value="daily">روزانه</option>
-                      <option value="workdays">روزهای کاری (شنبه تا چهارشنبه)</option>
-                      <option value="weekly">هفتگی</option>
-                      <option value="monthly">ماهانه</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-ink-muted mb-1 flex items-center gap-1">
-                      <Bell className="w-3.5 h-3.5 text-ink-subtle" />
-                      <span>یادآور قبل از شروع:</span>
-                    </label>
-                    <select
-                      value={reminderMinutes}
-                      onChange={(e) => setReminderMinutes(Number(e.target.value))}
-                      className="w-full bg-canvas-secondary border border-border-subtle rounded-xl px-3 py-2 text-xs text-ink-primary outline-none"
-                    >
-                      <option value="0">سر ساعت شروع</option>
-                      <option value="5">۵ دقیقه قبل</option>
-                      <option value="15">۱۵ دقیقه قبل</option>
-                      <option value="30">۳۰ دقیقه قبل</option>
-                      <option value="60">۱ ساعت قبل</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Subtasks Builder */}
-                <div>
-                  <label className="block text-xs font-bold text-ink-muted mb-1 flex items-center gap-1">
-                    <CheckSquare className="w-3.5 h-3.5 text-accent-primary" />
-                    <span>زیرتسک‌ها و چک‌لیست ({subtasks.length}):</span>
-                  </label>
-                  <div className="space-y-1.5 mb-2">
-                    {subtasks.map((st) => (
-                      <div
-                        key={st.id}
-                        className="flex items-center justify-between p-2 rounded-lg bg-canvas-secondary border border-border-subtle text-xs"
-                      >
-                        <span className="text-ink-primary truncate">{st.title}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSubtask(st.id)}
-                          className="text-red-400 hover:text-red-300 p-1"
+              {showSubtasks && (
+                <div className="space-y-2 p-3 rounded-2xl bg-canvas-secondary/50 border border-border-subtle">
+                  {/* Subtask list */}
+                  {subtasks.length > 0 && (
+                    <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                      {subtasks.map((st) => (
+                        <div
+                          key={st.id}
+                          className="flex items-center justify-between p-1.5 px-2 rounded-xl bg-canvas-elevated border border-border-subtle text-xs"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
+                          <span className="text-ink-primary">{st.title}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSubtask(st.id)}
+                            className="text-ink-muted hover:text-red-400 transition"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add Subtask Input */}
+                  <div className="flex items-center gap-2">
                     <input
+                      ref={subtaskInputRef}
                       type="text"
-                      placeholder="عنوان زیرتسک جدید..."
                       value={subtaskInput}
                       onChange={(e) => setSubtaskInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask(e)}
-                      className="flex-1 bg-canvas-secondary border border-border-subtle rounded-lg px-3 py-1.5 text-xs text-ink-primary outline-none"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddSubtask();
+                        }
+                      }}
+                      placeholder="عنوان مرحله جدید را بنویسید و Enter بزنید..."
+                      className="flex-1 bg-transparent border-0 text-xs text-ink-primary placeholder:text-ink-muted/50 focus:outline-none"
                     />
                     <button
                       type="button"
-                      onClick={handleAddSubtask}
-                      className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-xs text-ink-primary font-bold"
+                      onClick={() => handleAddSubtask()}
+                      className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-ink-primary text-xs font-bold transition"
                     >
                       افزودن
                     </button>
                   </div>
                 </div>
-              </motion.div>
-            )}
+              )}
+            </div>
 
-            {/* Tags & Filters */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-bold text-ink-muted flex items-center gap-1">
-                  <Tag className="w-3.5 h-3.5 text-ink-subtle" />
-                  <span>برچسب‌ها و فیلترها:</span>
-                </label>
+            {/* 5. Footer Row: Keyboard Shortcut Hint & Submit */}
+            <div className="flex items-center justify-between pt-3 border-t border-border-subtle/80">
+              <div className="text-[11px] text-ink-muted hidden sm:flex items-center gap-1.5">
+                <kbd className="font-mono bg-white/5 border border-border-subtle px-1.5 py-0.5 rounded text-[10px]">
+                  Cmd+Enter
+                </kbd>
+                <span>برای ثبت فوری</span>
               </div>
 
-              {/* Preset Tag Chips */}
-              <div className="flex flex-wrap gap-1 mb-2">
-                {PRESET_TAGS.map((pt) => {
-                  const isSelected = tags.includes(pt);
-                  return (
-                    <button
-                      key={pt}
-                      type="button"
-                      onClick={() => isSelected ? handleRemoveTag(pt) : handleAddTag(pt)}
-                      className={`text-[11px] px-2 py-0.5 rounded-md border transition ${
-                        isSelected
-                          ? 'bg-accent-primary/20 border-accent-primary text-accent-primary font-bold'
-                          : 'bg-canvas-secondary border-border-subtle text-ink-muted hover:text-ink-primary'
-                      }`}
-                    >
-                      {pt}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Tag Badges + Input */}
-              <div className="flex flex-wrap gap-1.5 p-2 rounded-xl bg-canvas-secondary border border-border-subtle min-h-[38px]">
-                {tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/10 text-ink-primary text-xs"
-                  >
-                    <span>{tag}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTag(tag)}
-                      className="hover:text-red-400 transition"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-                <input
-                  type="text"
-                  placeholder="افزودن برچسب دلخواه (با Enter)..."
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={handleCustomTagKeyDown}
-                  className="bg-transparent text-xs text-ink-primary outline-none flex-1 min-w-[120px]"
-                />
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-ink-muted hover:text-ink-primary hover:bg-white/5 transition cursor-pointer"
+                >
+                  انصراف
+                </button>
+                <button
+                  type="submit"
+                  disabled={!title.trim()}
+                  className="flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-accent-primary hover:bg-accent-hover disabled:opacity-40 text-white font-bold text-xs shadow-needle transition active:scale-95 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>ایجاد تسک</span>
+                </button>
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center justify-between pt-4 border-t border-border-subtle">
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="px-4 py-2 rounded-xl hover:bg-white/5 text-xs text-ink-muted transition"
-              >
-                انصراف
-              </button>
-
-              <button
-                type="submit"
-                className="flex items-center gap-1.5 px-6 py-2.5 rounded-xl bg-accent-primary hover:bg-accent-hover text-white text-xs font-bold transition shadow-needle active:scale-95"
-              >
-                <Plus className="w-4 h-4" />
-                <span>ثبت و اضافه به برنامه</span>
-              </button>
-            </div>
           </form>
         </motion.div>
       </div>
     </AnimatePresence>
   );
 };
+
+export default CreateTaskModal;

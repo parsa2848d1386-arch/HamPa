@@ -1,0 +1,46 @@
+# Authorized mutations for HamPA
+
+mutation UpsertUserProfile(
+  $userId: String!
+  $displayName: String!
+  $email: String
+  $isGuest: Boolean!
+  $streakDays: Int!
+  $dailyCapacityMinutes: Int!
+) @auth(level: USER) {
+  userProfile_upsert(
+    data: {
+      id: $userId
+      displayName: $displayName
+      email: $email
+      isGuest: $isGuest
+      streakDays: $streakDays
+      dailyCapacityMinutes: $dailyCapacityMinutes
+    }
+  )
+}
+
+mutation CreateTask(
+  $id: String!
+  $userId: String!
+  $title: String!
+  $date: Date!
+  $durationMinutes: Int!
+  $priority: String!
+  $status: String!
+  $isMIT: Boolean!
+) @auth(level: USER) {
+  task_insert(
+    data: {
+      id: $id
+      user: { id: $userId }
+      title: $title
+      date: $date
+      durationMinutes: $durationMinutes
+      priority: $priority
+      status: $status
+      isMIT: $isMIT
+      totalSecondsStudied: 0
+    }
+  )
+}

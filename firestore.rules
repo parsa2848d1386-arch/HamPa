@@ -1,0 +1,658 @@
+rules_version = '2';
+
+// ===============================================================
+// HamPA (هم‌پا) - Production-Grade Cloud Firestore Security Rules
+// ===============================================================
+//
+// Application: HamPA Hybrid Productivity & Study Planner
+// Architecture: Local-First (Drift SQLite / Local Cache) + Cloud Firestore Sync & Live Rooms
+// Integrity: Strict RBAC, Validator Function Pattern, Resource Exhaustion Limits,
+//            Immutable Field Protection, Zero Unauthenticated Access.
+//
+// ===============================================================
+// Assumed Data Models
+// ===============================================================
+//
+// 1. Collection: users/{userId}
+//    Document ID: Firebase Auth UID ({userId})
+//    Description: Private user account profile and study preferences
+//    Fields:
+//      - uid: string (required, immutable, must equal userId and request.auth.uid)
+//      - displayName: string (required, 1-100 chars)
+//      - email: string (optional/nullable, valid email format, max 100 chars)
+//      - photoURL: string (optional/nullable, valid http/https url, max 1000 chars)
+//      - isGuest: bool (required)
+//      - streakDays: int (required, >= 0)
+//      - lastStudyDate: string (optional/nullable, YYYY-MM-DD format)
+//      - dailyCapacityMinutes: int (required, 60 to 1440 minutes)
+//      - targetExamDate: string (optional/nullable/empty, YYYY-MM-DD format)
+//      - targetExamTitle: string (optional/nullable, max 200 chars)
+//      - bio: string (optional/nullable, max 500 chars)
+//      - createdAt: timestamp / string (optional/nullable, immutable on update)
+//      - updatedAt: timestamp / string (required)
+//    Security:
+//      - Owner only (request.auth.uid == userId) for all operations.
+//      - PII protected: No blanket authenticated or public reads.
+//
+// 2. Collection: users/{userId}/tasks/{taskId}
+//    Document ID: Task UUID ({taskId})
+//    Description: User study tasks, checklist items, and Notion-style blocks
+//    Fields:
+//      - id: string (required, immutable, must equal taskId)
+//      - title: string (required, 1-300 chars)
+//      - description: string (optional/nullable, max 2000 chars)
+//      - subjectId: string (optional/nullable, max 100 chars)
+//      - date: string (required, YYYY-MM-DD format)
+//      - startTime: string (optional/nullable/empty, HH:mm format)
+//      - durationMinutes: int (required, 0 to 1440)
+//      - color: string (optional/nullable, hex color format, max 20 chars)
+//      - priority: string (required, in ['urgent', 'high', 'medium', 'low'])
+//      - status: string (required, in ['todo', 'in_progress', 'completed', 'cancelled'])
+//      - isMIT: bool (optional/nullable, default false)
+//      - tags: list (optional/nullable, max 20 items)
+//      - subtasks: list (optional/nullable, max 50 maps)
+//      - blocks: list (optional/nullable, max 100 maps)
+//      - totalSecondsStudied: int (required, >= 0)
+//      - energyLevel: string (optional/nullable, in ['high', 'medium', 'low'])
+//      - estimatedPomodoros: int (optional/nullable, >= 0)
+//      - recurrence: string (optional/nullable, in ['none', 'daily', 'workdays', 'weekly', 'monthly'])
+//      - reminderMinutesBefore: int (optional/nullable, >= 0)
+//      - createdAt: timestamp / string (required, immutable on update)
+//      - updatedAt: timestamp / string (required)
+//    Security:
+//      - Owner only (request.auth.uid == userId).
+//
+// 3. Collection: users/{userId}/sessions/{sessionId}
+//    Document ID: Focus Session UUID ({sessionId})
+//    Description: Monotonic focus sessions (Pomodoro, Stopwatch, Mock Exam, Countdown)
+//    Fields:
+//      - id: string (required, immutable, must equal sessionId)
+//      - subjectId: string (required, 1-100 chars)
+//      - subjectName: string (optional/nullable, max 100 chars)
+//      - taskId: string (optional/nullable, max 100 chars)
+//      - taskTitle: string (optional/nullable, max 300 chars)
+//      - durationSeconds: int (required, 0 to 86400)
+//      - startedAt: timestamp / string (required, immutable on update)
+//      - endedAt: timestamp / string (required)
+//      - mode: string (required, in ['stopwatch', 'pomodoro', 'exam', 'countdown'])
+//      - dateKey: string (required, YYYY-MM-DD format)
+//      - laps: list (optional/nullable, max 50 items)
+//    Security:
+//      - Owner only (request.auth.uid == userId).
+//
+// 4. Collection: users/{userId}/subjects/{subjectId}
+//    Document ID: Subject UUID ({subjectId})
+//    Description: User custom study subjects and color coding
+//    Fields:
+//      - id: string (required, immutable, must equal subjectId)
+//      - name: string (required, 1-100 chars)
+//      - color: string (required, hex color format, max 20 chars)
+//      - icon: string (optional/nullable, max 50 chars)
+//      - targetDailyMinutes: int (required, 0 to 1440)
+//      - totalSecondsStudied: int (required, >= 0)
+//    Security:
+//      - Owner only (request.auth.uid == userId).
+//
+// 5. Collection: study_rooms/{roomId}
+//    Document ID: Study Room ID ({roomId})
+//    Description: Collaborative study rooms with peer quotas and policies
+//    Fields:
+//      - id: string (required, immutable, must equal roomId)
+//      - name: string (required, 1-100 chars)
+//      - creator_user_id: string (required, immutable, must equal request.auth.uid on create)
+//      - chat_enabled: bool (required)
+//      - daily_message_quota_per_user: int (required, 0 to 100)
+//      - created_at: timestamp / string (required, immutable on update)
+//    Security:
+//      - Any authenticated user can read.
+//      - Only room creator can update settings or delete room.
+//
+// 6. Collection: study_rooms/{roomId}/members/{memberId}
+//    Document ID: User ID ({memberId})
+//    Description: Real-time room member presence and current study state
+//    Fields:
+//      - user_id: string (required, immutable, must equal memberId and request.auth.uid)
+//      - nickname: string (required, 1-50 chars)
+//      - displayName: string (optional/nullable, max 50 chars)
+//      - status: string (required, in ['STUDYING', 'RESTING', 'OFFLINE'])
+//      - active_subject_name: string (optional/nullable, max 100 chars)
+//      - active_subject_color: string (optional/nullable, max 20 chars)
+//      - elapsed_seconds: int (required, >= 0)
+//      - daily_study_seconds: int (required, >= 0)
+//      - last_active: timestamp / string (required)
+//      - avatarType: string (optional/nullable, max 50 chars)
+//      - avatarAnimation: string (optional/nullable, max 100 chars)
+//    Security:
+//      - Any authenticated user can read active peer presences in room.
+//      - Only the member themselves can write, update, or remove their own presence.
+//
+// 7. Collection: study_rooms/{roomId}/messages/{messageId}
+//    Document ID: Message UUID ({messageId})
+//    Description: Study room quiet messages and text exchanges
+//    Fields:
+//      - senderId: string (required, immutable, must match request.auth.uid)
+//      - senderName: string (required, 1-50 chars)
+//      - text: string (required, 1-300 chars)
+//      - timestamp: timestamp / string (required)
+//    Security:
+//      - Any authenticated user can read room messages.
+//      - Authenticated users can create messages if senderId matches their UID.
+//      - Updates and deletes are prohibited for normal users to preserve message integrity.
+//
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Root Level Default Deny
+    // ===============================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ===============================================================
+    // Helper Functions: Authentication & Authorization
+    // ===============================================================
+
+    /// Checks if the incoming request has a valid authenticated session.
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    /// Checks if the incoming user matches the specified owner userId.
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ===============================================================
+    // Helper Functions: Field Diff & Immutability
+    // ===============================================================
+
+    /// Ensures that required fields exist on the payload.
+    function hasRequiredFields(data, fields) {
+      return data.keys().hasAll(fields);
+    }
+
+    /// Enforces strict schema: ensures payload contains only allowed fields.
+    function hasOnlyAllowedFields(data, fields) {
+      return data.keys().hasOnly(fields);
+    }
+
+    /// Ensures immutable fields are not changed during an update operation.
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // ===============================================================
+    // Helper Functions: Formats, Types & Bounds
+    // ===============================================================
+
+    /// Accepts either a native Firestore Timestamp or an ISO-8601 string representation.
+    function isTimestampOrString(val) {
+      return (val is timestamp) ||
+             (val is string && val.size() >= 10 && val.size() <= 40);
+    }
+
+    /// Validates YYYY-MM-DD date format using standard character ranges.
+    function isValidDateFormat(dateStr) {
+      return dateStr is string &&
+             dateStr.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    /// Validates HH:mm 24-hour time format.
+    function isValidTimeFormat(timeStr) {
+      return timeStr is string &&
+             timeStr.matches('^[0-2][0-9]:[0-5][0-9]$');
+    }
+
+    /// Validates Hex color codes (#RGB, #RRGGBB, or #RRGGBBAA).
+    function isValidHexColor(colorStr) {
+      return colorStr is string &&
+             colorStr.matches('^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8}|[A-Fa-f0-9]{3})$');
+    }
+
+    /// Validates email format.
+    function isValidEmail(email) {
+      return email is string &&
+             email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+[.][a-zA-Z]{2,}$');
+    }
+
+    /// Validates HTTP/HTTPS web URLs.
+    function isValidUrl(url) {
+      return url is string &&
+             (url.matches('^https?://.*'));
+    }
+
+    // ===============================================================
+    // Domain Validator 1: User Profile
+    // ===============================================================
+
+    function isValidUser(data, userId) {
+      let allowedFields = [
+        'uid', 'displayName', 'email', 'photoURL', 'isGuest',
+        'streakDays', 'lastStudyDate', 'dailyCapacityMinutes',
+        'targetExamDate', 'targetExamTitle', 'bio', 'createdAt', 'updatedAt'
+      ];
+      let requiredFields = [
+        'uid', 'displayName', 'isGuest', 'streakDays',
+        'dailyCapacityMinutes', 'updatedAt'
+      ];
+
+      return hasRequiredFields(data, requiredFields) &&
+             hasOnlyAllowedFields(data, allowedFields) &&
+             data.uid is string &&
+             data.uid == userId &&
+             data.uid == request.auth.uid &&
+             data.displayName is string &&
+             data.displayName.size() >= 1 &&
+             data.displayName.size() <= 100 &&
+             data.isGuest is bool &&
+             data.streakDays is int &&
+             data.streakDays >= 0 &&
+             data.dailyCapacityMinutes is int &&
+             data.dailyCapacityMinutes >= 60 &&
+             data.dailyCapacityMinutes <= 1440 &&
+             isTimestampOrString(data.updatedAt) &&
+             // Optional createdAt validation
+             (!('createdAt' in data) || data.createdAt == null || isTimestampOrString(data.createdAt)) &&
+             // Optional email validation
+             (!('email' in data) || data.email == null ||
+              (data.email is string && data.email.size() <= 100 && isValidEmail(data.email))) &&
+             // Optional photoURL validation
+             (!('photoURL' in data) || data.photoURL == null ||
+              (data.photoURL is string && data.photoURL.size() <= 1000 && isValidUrl(data.photoURL))) &&
+             // Optional lastStudyDate validation
+             (!('lastStudyDate' in data) || data.lastStudyDate == null ||
+              (data.lastStudyDate is string && isValidDateFormat(data.lastStudyDate))) &&
+             // Optional targetExamDate validation
+             (!('targetExamDate' in data) || data.targetExamDate == null || data.targetExamDate == '' ||
+              (data.targetExamDate is string && isValidDateFormat(data.targetExamDate))) &&
+             // Optional targetExamTitle validation
+             (!('targetExamTitle' in data) || data.targetExamTitle == null ||
+              (data.targetExamTitle is string && data.targetExamTitle.size() <= 200)) &&
+             // Optional bio validation
+             (!('bio' in data) || data.bio == null ||
+              (data.bio is string && data.bio.size() <= 500));
+    }
+
+    // ===============================================================
+    // Domain Validator 2: Task Document
+    // ===============================================================
+
+    function isValidTask(data, taskId) {
+      let allowedFields = [
+        'id', 'title', 'description', 'subjectId', 'date',
+        'startTime', 'durationMinutes', 'color', 'priority',
+        'status', 'isMIT', 'tags', 'subtasks', 'blocks',
+        'totalSecondsStudied', 'energyLevel', 'estimatedPomodoros',
+        'recurrence', 'reminderMinutesBefore', 'createdAt', 'updatedAt'
+      ];
+      let requiredFields = [
+        'id', 'title', 'date', 'durationMinutes', 'priority',
+        'status', 'totalSecondsStudied', 'createdAt', 'updatedAt'
+      ];
+
+      return hasRequiredFields(data, requiredFields) &&
+             hasOnlyAllowedFields(data, allowedFields) &&
+             data.id is string &&
+             data.id == taskId &&
+             data.title is string &&
+             data.title.size() >= 1 &&
+             data.title.size() <= 300 &&
+             data.date is string &&
+             isValidDateFormat(data.date) &&
+             data.durationMinutes is int &&
+             data.durationMinutes >= 0 &&
+             data.durationMinutes <= 1440 &&
+             data.priority in ['urgent', 'high', 'medium', 'low'] &&
+             data.status in ['todo', 'in_progress', 'completed', 'cancelled'] &&
+             data.totalSecondsStudied is int &&
+             data.totalSecondsStudied >= 0 &&
+             isTimestampOrString(data.createdAt) &&
+             isTimestampOrString(data.updatedAt) &&
+             // Optional isMIT
+             (!('isMIT' in data) || data.isMIT == null || data.isMIT is bool) &&
+             // Optional description
+             (!('description' in data) || data.description == null ||
+              (data.description is string && data.description.size() <= 2000)) &&
+             // Optional subjectId
+             (!('subjectId' in data) || data.subjectId == null ||
+              (data.subjectId is string && data.subjectId.size() <= 100)) &&
+             // Optional startTime (HH:mm)
+             (!('startTime' in data) || data.startTime == null || data.startTime == '' ||
+              (data.startTime is string && isValidTimeFormat(data.startTime))) &&
+             // Optional color
+             (!('color' in data) || data.color == null ||
+              (data.color is string && data.color.size() <= 20 && isValidHexColor(data.color))) &&
+             // Optional tags list
+             (!('tags' in data) || data.tags == null ||
+              (data.tags is list && data.tags.size() <= 20)) &&
+             // Optional subtasks list
+             (!('subtasks' in data) || data.subtasks == null ||
+              (data.subtasks is list && data.subtasks.size() <= 50)) &&
+             // Optional blocks list
+             (!('blocks' in data) || data.blocks == null ||
+              (data.blocks is list && data.blocks.size() <= 100)) &&
+             // Optional energyLevel
+             (!('energyLevel' in data) || data.energyLevel == null ||
+              data.energyLevel in ['high', 'medium', 'low']) &&
+             // Optional estimatedPomodoros
+             (!('estimatedPomodoros' in data) || data.estimatedPomodoros == null ||
+              (data.estimatedPomodoros is int && data.estimatedPomodoros >= 0)) &&
+             // Optional recurrence
+             (!('recurrence' in data) || data.recurrence == null ||
+              data.recurrence in ['none', 'daily', 'workdays', 'weekly', 'monthly']) &&
+             // Optional reminderMinutesBefore
+             (!('reminderMinutesBefore' in data) || data.reminderMinutesBefore == null ||
+              (data.reminderMinutesBefore is int && data.reminderMinutesBefore >= 0));
+    }
+
+    // ===============================================================
+    // Domain Validator 3: Study Session Document
+    // ===============================================================
+
+    function isValidSession(data, sessionId) {
+      let allowedFields = [
+        'id', 'subjectId', 'subjectName', 'taskId', 'taskTitle',
+        'durationSeconds', 'startedAt', 'endedAt', 'mode', 'dateKey', 'laps'
+      ];
+      let requiredFields = [
+        'id', 'subjectId', 'durationSeconds', 'startedAt',
+        'endedAt', 'mode', 'dateKey'
+      ];
+
+      return hasRequiredFields(data, requiredFields) &&
+             hasOnlyAllowedFields(data, allowedFields) &&
+             data.id is string &&
+             data.id == sessionId &&
+             data.subjectId is string &&
+             data.subjectId.size() >= 1 &&
+             data.subjectId.size() <= 100 &&
+             data.durationSeconds is int &&
+             data.durationSeconds >= 0 &&
+             data.durationSeconds <= 86400 &&
+             isTimestampOrString(data.startedAt) &&
+             isTimestampOrString(data.endedAt) &&
+             data.mode in ['stopwatch', 'pomodoro', 'exam', 'countdown'] &&
+             data.dateKey is string &&
+             isValidDateFormat(data.dateKey) &&
+             // Optional subjectName
+             (!('subjectName' in data) || data.subjectName == null ||
+              (data.subjectName is string && data.subjectName.size() <= 100)) &&
+             // Optional taskId
+             (!('taskId' in data) || data.taskId == null ||
+              (data.taskId is string && data.taskId.size() <= 100)) &&
+             // Optional taskTitle
+             (!('taskTitle' in data) || data.taskTitle == null ||
+              (data.taskTitle is string && data.taskTitle.size() <= 300)) &&
+             // Optional laps list
+             (!('laps' in data) || data.laps == null ||
+              (data.laps is list && data.laps.size() <= 50));
+    }
+
+    // ===============================================================
+    // Domain Validator 4: Custom Subject Document
+    // ===============================================================
+
+    function isValidSubject(data, subjectId) {
+      let allowedFields = [
+        'id', 'name', 'color', 'icon', 'targetDailyMinutes', 'totalSecondsStudied'
+      ];
+      let requiredFields = [
+        'id', 'name', 'color', 'targetDailyMinutes', 'totalSecondsStudied'
+      ];
+
+      return hasRequiredFields(data, requiredFields) &&
+             hasOnlyAllowedFields(data, allowedFields) &&
+             data.id is string &&
+             data.id == subjectId &&
+             data.name is string &&
+             data.name.size() >= 1 &&
+             data.name.size() <= 100 &&
+             data.color is string &&
+             data.color.size() <= 20 &&
+             isValidHexColor(data.color) &&
+             data.targetDailyMinutes is int &&
+             data.targetDailyMinutes >= 0 &&
+             data.targetDailyMinutes <= 1440 &&
+             data.totalSecondsStudied is int &&
+             data.totalSecondsStudied >= 0 &&
+             // Optional icon
+             (!('icon' in data) || data.icon == null ||
+              (data.icon is string && data.icon.size() <= 50));
+    }
+
+    // ===============================================================
+    // Domain Validator 5: Collaborative Study Room
+    // ===============================================================
+
+    function isValidStudyRoom(data, roomId) {
+      let allowedFields = [
+        'id', 'name', 'creator_user_id', 'chat_enabled',
+        'daily_message_quota_per_user', 'created_at'
+      ];
+      let requiredFields = [
+        'id', 'name', 'creator_user_id', 'chat_enabled',
+        'daily_message_quota_per_user', 'created_at'
+      ];
+
+      return hasRequiredFields(data, requiredFields) &&
+             hasOnlyAllowedFields(data, allowedFields) &&
+             data.id is string &&
+             data.id == roomId &&
+             data.name is string &&
+             data.name.size() >= 1 &&
+             data.name.size() <= 100 &&
+             data.creator_user_id is string &&
+             data.creator_user_id.size() >= 1 &&
+             data.creator_user_id.size() <= 128 &&
+             data.chat_enabled is bool &&
+             data.daily_message_quota_per_user is int &&
+             data.daily_message_quota_per_user >= 0 &&
+             data.daily_message_quota_per_user <= 100 &&
+             isTimestampOrString(data.created_at);
+    }
+
+    // ===============================================================
+    // Domain Validator 6: Room Member Presence
+    // ===============================================================
+
+    function isValidRoomMember(data, memberId) {
+      let allowedFields = [
+        'user_id', 'nickname', 'displayName', 'status',
+        'active_subject_name', 'active_subject_color',
+        'elapsed_seconds', 'daily_study_seconds', 'last_active',
+        'avatarType', 'avatarAnimation'
+      ];
+      let requiredFields = [
+        'user_id', 'nickname', 'status', 'elapsed_seconds',
+        'daily_study_seconds', 'last_active'
+      ];
+
+      return hasRequiredFields(data, requiredFields) &&
+             hasOnlyAllowedFields(data, allowedFields) &&
+             data.user_id is string &&
+             data.user_id == memberId &&
+             data.user_id == request.auth.uid &&
+             data.nickname is string &&
+             data.nickname.size() >= 1 &&
+             data.nickname.size() <= 50 &&
+             data.status in ['STUDYING', 'RESTING', 'OFFLINE'] &&
+             data.elapsed_seconds is int &&
+             data.elapsed_seconds >= 0 &&
+             data.daily_study_seconds is int &&
+             data.daily_study_seconds >= 0 &&
+             isTimestampOrString(data.last_active) &&
+             // Optional displayName
+             (!('displayName' in data) || data.displayName == null ||
+              (data.displayName is string && data.displayName.size() <= 50)) &&
+             // Optional active subject name
+             (!('active_subject_name' in data) || data.active_subject_name == null ||
+              (data.active_subject_name is string && data.active_subject_name.size() <= 100)) &&
+             // Optional active subject color
+             (!('active_subject_color' in data) || data.active_subject_color == null ||
+              (data.active_subject_color is string && data.active_subject_color.size() <= 20 &&
+               (data.active_subject_color == '' || isValidHexColor(data.active_subject_color)))) &&
+             // Optional avatarType
+             (!('avatarType' in data) || data.avatarType == null ||
+              (data.avatarType is string && data.avatarType.size() <= 50)) &&
+             // Optional avatarAnimation
+             (!('avatarAnimation' in data) || data.avatarAnimation == null ||
+              (data.avatarAnimation is string && data.avatarAnimation.size() <= 100));
+    }
+
+    // ===============================================================
+    // Domain Validator 7: Room Message
+    // ===============================================================
+
+    function isValidRoomMessage(data) {
+      let allowedFields = ['senderId', 'senderName', 'text', 'timestamp'];
+      let requiredFields = ['senderId', 'senderName', 'text', 'timestamp'];
+
+      return hasRequiredFields(data, requiredFields) &&
+             hasOnlyAllowedFields(data, allowedFields) &&
+             data.senderId is string &&
+             data.senderId == request.auth.uid &&
+             data.senderName is string &&
+             data.senderName.size() >= 1 &&
+             data.senderName.size() <= 50 &&
+             data.text is string &&
+             data.text.size() >= 1 &&
+             data.text.size() <= 300 &&
+             isTimestampOrString(data.timestamp);
+    }
+
+    // ===============================================================
+    // Collection Rules: Users & User-Owned Subcollections
+    // ===============================================================
+
+    match /users/{userId} {
+      // PII Protection: Only the authenticated owner can read their profile
+      allow read: if isOwner(userId);
+
+      // Create: Owner-only, validated schema, identity verification
+      allow create: if isOwner(userId) &&
+                       isValidUser(request.resource.data, userId);
+
+      // Update: Owner-only, immutable fields protected, validated schema
+      allow update: if isOwner(userId) &&
+                       areImmutableFieldsUnchanged(['uid', 'createdAt']) &&
+                       isValidUser(request.resource.data, userId);
+
+      // Delete: Owner-only account deletion
+      allow delete: if isOwner(userId);
+
+      // -------------------------------------------------------------
+      // Subcollection: Tasks
+      // -------------------------------------------------------------
+      match /tasks/{taskId} {
+        allow read: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidTask(request.resource.data, taskId);
+
+        allow update: if isOwner(userId) &&
+                         areImmutableFieldsUnchanged(['id', 'createdAt']) &&
+                         isValidTask(request.resource.data, taskId);
+
+        allow delete: if isOwner(userId);
+      }
+
+      // -------------------------------------------------------------
+      // Subcollection: Focus Study Sessions
+      // -------------------------------------------------------------
+      match /sessions/{sessionId} {
+        allow read: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidSession(request.resource.data, sessionId);
+
+        allow update: if isOwner(userId) &&
+                         areImmutableFieldsUnchanged(['id', 'startedAt']) &&
+                         isValidSession(request.resource.data, sessionId);
+
+        allow delete: if isOwner(userId);
+      }
+
+      // -------------------------------------------------------------
+      // Subcollection: Custom Subjects
+      // -------------------------------------------------------------
+      match /subjects/{subjectId} {
+        allow read: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidSubject(request.resource.data, subjectId);
+
+        allow update: if isOwner(userId) &&
+                         areImmutableFieldsUnchanged(['id']) &&
+                         isValidSubject(request.resource.data, subjectId);
+
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    // ===============================================================
+    // Collection Rules: Collaborative Live Study Rooms
+    // ===============================================================
+
+    match /study_rooms/{roomId} {
+      // Any authenticated student can browse live study rooms
+      allow read: if isAuthenticated();
+
+      // Any authenticated user can create a room, designating themselves as creator
+      allow create: if isAuthenticated() &&
+                       request.resource.data.creator_user_id == request.auth.uid &&
+                       isValidStudyRoom(request.resource.data, roomId);
+
+      // Only the room creator can update settings; immutable fields locked
+      allow update: if isAuthenticated() &&
+                       resource.data.creator_user_id == request.auth.uid &&
+                       areImmutableFieldsUnchanged(['id', 'creator_user_id', 'created_at']) &&
+                       isValidStudyRoom(request.resource.data, roomId);
+
+      // Only the room creator can delete the study room
+      allow delete: if isAuthenticated() &&
+                       resource.data.creator_user_id == request.auth.uid;
+
+      // -------------------------------------------------------------
+      // Subcollection: Real-Time Member Presence
+      // -------------------------------------------------------------
+      match /members/{memberId} {
+        // Authenticated users in the room can see peer presence states
+        allow read: if isAuthenticated();
+
+        // Only the member can create their own presence entry
+        allow create: if isAuthenticated() &&
+                         request.auth.uid == memberId &&
+                         isValidRoomMember(request.resource.data, memberId);
+
+        // Only the member can update their study/rest status and timers
+        allow update: if isAuthenticated() &&
+                         request.auth.uid == memberId &&
+                         areImmutableFieldsUnchanged(['user_id']) &&
+                         isValidRoomMember(request.resource.data, memberId);
+
+        // Only the member can remove themselves when leaving the room
+        allow delete: if isAuthenticated() &&
+                         request.auth.uid == memberId;
+      }
+
+      // -------------------------------------------------------------
+      // Subcollection: Quiet Study Chat Messages
+      // -------------------------------------------------------------
+      match /messages/{messageId} {
+        // Authenticated room members can read study chat messages
+        allow read: if isAuthenticated();
+
+        // Authenticated users can post messages as themselves
+        allow create: if isAuthenticated() &&
+                         request.resource.data.senderId == request.auth.uid &&
+                         isValidRoomMessage(request.resource.data);
+
+        // Normal users cannot tamper with or delete sent messages
+        allow update, delete: if false;
+      }
+    }
+  }
+}

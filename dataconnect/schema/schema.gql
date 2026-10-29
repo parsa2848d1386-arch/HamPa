@@ -1,0 +1,55 @@
+# HamPA PostgreSQL GraphQL Schema for Firebase Data Connect
+
+type UserProfile @table {
+  id: String! @col(name: "user_id")
+  displayName: String!
+  email: String
+  photoURL: String
+  isGuest: Boolean!
+  streakDays: Int!
+  dailyCapacityMinutes: Int!
+  targetExamTitle: String
+  targetExamDate: Date
+  bio: String
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp! @default(expr: "request.time")
+}
+
+type Subject @table {
+  id: String! @col(name: "subject_id")
+  user: UserProfile! @ref
+  name: String!
+  color: String!
+  targetDailyMinutes: Int!
+  totalSecondsStudied: Int!
+}
+
+type Task @table {
+  id: String! @col(name: "task_id")
+  user: UserProfile! @ref
+  subject: Subject
+  title: String!
+  description: String
+  date: Date!
+  startTime: String
+  durationMinutes: Int!
+  color: String
+  priority: String!
+  status: String!
+  isMIT: Boolean!
+  totalSecondsStudied: Int!
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp! @default(expr: "request.time")
+}
+
+type StudySession @table {
+  id: String! @col(name: "session_id")
+  user: UserProfile! @ref
+  task: Task
+  subject: Subject
+  durationSeconds: Int!
+  startedAt: Timestamp!
+  endedAt: Timestamp!
+  mode: String!
+  dateKey: String!
+}

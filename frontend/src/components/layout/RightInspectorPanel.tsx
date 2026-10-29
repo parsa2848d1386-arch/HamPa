@@ -53,10 +53,10 @@ export const RightInspectorPanel: React.FC = () => {
 
   return (
     <>
-      {/* Mobile Backdrop Overlay (only on < lg) */}
+      {/* Mobile Backdrop Overlay (only on < lg, below header) */}
       <div 
         onClick={toggleInspector} 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+        className="fixed inset-x-0 bottom-0 top-14 bg-black/60 backdrop-blur-sm z-30 lg:hidden"
         aria-hidden="true" 
       />
 

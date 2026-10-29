@@ -5,6 +5,7 @@ import { useAppStore } from '../../store/useAppStore';
 
 const SHORTCUTS = [
   { key: 'Cmd + K', desc: 'باز کردن پالت دستورات سریع (Command Palette)' },
+  { key: 'Alt + S', desc: 'باز کردن تنظیمات، تم‌های تلگرامی و پروفایل کاربر' },
   { key: 'H', desc: 'تغییر به داشبورد اصلی چندپنجره‌ای ویجت‌ها' },
   { key: 'C', desc: 'ایجاد تسک یا بلوک جدید در زمان جاری' },
   { key: 'T', desc: 'پرش به امروز و همگام‌سازی زمان‌سنج' },

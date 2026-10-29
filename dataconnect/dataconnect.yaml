@@ -1,0 +1,11 @@
+specVersion: "v1alpha"
+serviceId: "hampa-dataconnect"
+location: "us-central1"
+schema:
+  source: "./schema"
+  datasource:
+    postgresql:
+      database: "hampa_db"
+      cloudSql:
+        instanceId: "hampa-postgres-instance"
+connectorDirs: ["./connector"]

@@ -15,7 +15,10 @@ import {
   Sunrise,
   Sunset,
   Sun,
-  Moon
+  Moon,
+  Layout,
+  Columns3,
+  Sliders
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,6 +26,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 export const MobileTabBar: React.FC = () => {
   const viewMode = useAppStore((s) => s.viewMode);
   const setViewMode = useAppStore((s) => s.setViewMode);
+  const setSettingsOpen = useAppStore((s) => s.setSettingsOpen);
   const setCreateTaskOpen = useAppStore((s) => s.setCreateTaskOpen);
   const setBrainDumpOpen = useAppStore((s) => s.setBrainDumpOpen);
   const setFocusModalOpen = useAppStore((s) => s.setFocusModalOpen);
@@ -171,6 +175,38 @@ export const MobileTabBar: React.FC = () => {
                 </button>
 
                 <button
+                  type="button"
+                  onClick={() => { setViewMode('kanban'); setIsMoreViewsOpen(false); }}
+                  className={`p-3 rounded-2xl flex flex-col items-center gap-1.5 border transition ${
+                    viewMode === 'kanban' ? 'border-accent-primary bg-accent-primary/10 text-accent-primary font-bold' : 'border-border-subtle bg-canvas-secondary text-ink-muted'
+                  }`}
+                >
+                  <Layout className="w-5 h-5" />
+                  <span>تخته کانبان</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setViewMode('week'); setIsMoreViewsOpen(false); }}
+                  className={`p-3 rounded-2xl flex flex-col items-center gap-1.5 border transition ${
+                    viewMode === 'week' ? 'border-accent-primary bg-accent-primary/10 text-accent-primary font-bold' : 'border-border-subtle bg-canvas-secondary text-ink-muted'
+                  }`}
+                >
+                  <Columns3 className="w-5 h-5" />
+                  <span>نمای هفتگی</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setSettingsOpen(true); setIsMoreViewsOpen(false); }}
+                  className="p-3 rounded-2xl flex flex-col items-center gap-1.5 border border-border-subtle bg-canvas-secondary text-ink-muted transition"
+                >
+                  <Sliders className="w-5 h-5 text-accent-primary" />
+                  <span>تنظیمات و تم‌ها</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => { toggleTheme(); setIsMoreViewsOpen(false); }}
                   className="p-3 rounded-2xl flex flex-col items-center gap-1.5 border border-border-subtle bg-canvas-secondary text-ink-muted transition"
                 >

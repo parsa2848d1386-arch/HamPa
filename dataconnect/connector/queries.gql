@@ -1,0 +1,28 @@
+# Authorized queries for HamPA
+
+query GetUserTasks($userId: String!) @auth(level: USER) {
+  tasks(where: { user: { id: { eq: $userId } } }, orderBy: [{ date: ASC }, { startTime: ASC }]) {
+    id
+    title
+    description
+    date
+    startTime
+    durationMinutes
+    color
+    priority
+    status
+    isMIT
+    totalSecondsStudied
+  }
+}
+
+query GetUserStudySessions($userId: String!, $dateKey: String!) @auth(level: USER) {
+  studySessions(where: { user: { id: { eq: $userId } }, dateKey: { eq: $dateKey } }, orderBy: [{ startedAt: DESC }]) {
+    id
+    durationSeconds
+    startedAt
+    endedAt
+    mode
+    dateKey
+  }
+}

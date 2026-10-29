@@ -35,6 +35,60 @@
     --border-highlight: rgba(255, 255, 255, 0.18);
   }
 
+  /* Telegram Dark (Iconic Night Blue) */
+  .theme-telegram,
+  .dark.theme-telegram {
+    --bg-canvas: #0e1621;
+    --bg-surface-elevated: #17212b;
+    --bg-surface-secondary: #242f3d;
+    --bg-glass: rgba(14, 22, 33, 0.88);
+    --text-primary: #f5f5f5;
+    --text-muted: #829db5;
+    --text-subtle: #597387;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-highlight: rgba(130, 157, 181, 0.25);
+  }
+
+  /* Midnight Obsidian AMOLED Theme */
+  .theme-midnight,
+  .dark.theme-midnight {
+    --bg-canvas: #0c0a09;
+    --bg-surface-elevated: #141210;
+    --bg-surface-secondary: #1f1c19;
+    --bg-glass: rgba(12, 10, 9, 0.88);
+    --text-primary: #fafaf9;
+    --text-muted: #a8a29e;
+    --text-subtle: #78716c;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-highlight: rgba(255, 255, 255, 0.18);
+  }
+
+  /* Mindful Clean Day Theme */
+  .theme-day {
+    --bg-canvas: #faf9f6;
+    --bg-surface-elevated: #ffffff;
+    --bg-surface-secondary: #f3f1ec;
+    --bg-glass: rgba(250, 249, 246, 0.88);
+    --text-primary: #111111;
+    --text-muted: #575b5f;
+    --text-subtle: #85898d;
+    --border-subtle: rgba(0, 0, 0, 0.08);
+    --border-highlight: rgba(0, 0, 0, 0.15);
+  }
+
+  /* Warm Sepia Book Reader Theme */
+  .theme-sepia {
+    --bg-canvas: #f4ede2;
+    --bg-surface-elevated: #fbf7f0;
+    --bg-surface-secondary: #ebe0d0;
+    --bg-glass: rgba(244, 237, 226, 0.90);
+    --text-primary: #2c221e;
+    --text-muted: #6f5f53;
+    --text-subtle: #99887a;
+    --border-subtle: rgba(85, 65, 50, 0.12);
+    --border-highlight: rgba(85, 65, 50, 0.24);
+  }
+
   * {
     border-color: var(--border-subtle);
   }
@@ -90,10 +144,24 @@
   background: rgba(142, 139, 134, 0.5);
 }
 
+/* 144-Slot Micro Timetable Grid */
+.grid-cols-144 {
+  display: grid;
+  grid-template-columns: repeat(144, minmax(0, 1fr));
+}
+
 /* Fluid responsive typography helpers */
 @media (max-width: 600px) {
   .touch-target {
     min-height: 48px;
     min-width: 48px;
   }
+}
+
+/* Smooth Bento Card Ambient Lift */
+.bento-card {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.bento-card:hover {
+  transform: translateY(-2px);
 }

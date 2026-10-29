@@ -1,9 +1,7 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { 
   ChevronRight, 
   ChevronLeft, 
-  Sparkles, 
   Search, 
   Clock, 
   Columns, 
@@ -13,10 +11,11 @@ import {
   BarChart2, 
   Layout, 
   Columns3, 
-  Plus, 
   PanelLeft, 
-  PanelRight,
-  LayoutGrid
+  LayoutGrid,
+  Sun,
+  Moon,
+  Volume2
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { formatDateTitle } from '../../lib/calendarUtils';
@@ -24,8 +23,8 @@ import { formatDateTitle } from '../../lib/calendarUtils';
 const NAV_TABS = [
   { id: 'dashboard', label: 'داشبورد', icon: LayoutGrid },
   { id: 'day', label: 'تایم‌لاین', icon: Clock },
-  { id: 'dual_planner', label: 'پلنر ۱۰ دقیقه‌ای', icon: Columns },
-  { id: 'eisenhower', label: 'ماتریس آیزنهاور', icon: Grid },
+  { id: 'dual_planner', label: 'پلنر ۱۰د', icon: Columns },
+  { id: 'eisenhower', label: 'آیزنهاور', icon: Grid },
   { id: 'kanban', label: 'کانبان', icon: Layout },
   { id: 'analytics', label: 'آمار YPT', icon: BarChart2 },
   { id: 'study_room', label: 'اتاق زنده', icon: Users },
@@ -37,15 +36,26 @@ export const HeaderBar: React.FC = () => {
   const viewMode = useAppStore((s) => s.viewMode);
   const setViewMode = useAppStore((s) => s.setViewMode);
   const calendarSystem = useAppStore((s) => s.calendarSystem);
-  const setCalendarSystem = useAppStore((s) => s.setCalendarSystem);
   const selectedDate = useAppStore((s) => s.selectedDate);
   const setSelectedDate = useAppStore((s) => s.setSelectedDate);
   const setCommandPaletteOpen = useAppStore((s) => s.setCommandPaletteOpen);
   const isLeftSidebarOpen = useAppStore((s) => s.isLeftSidebarOpen);
   const toggleLeftSidebar = useAppStore((s) => s.toggleLeftSidebar);
   const user = useAppStore((s) => s.user);
+  const isDark = useAppStore((s) => s.isDark);
+  const toggleTheme = useAppStore((s) => s.toggleTheme);
+  const ambientSound = useAppStore((s) => s.ambientSound);
+  const setAmbientSound = useAppStore((s) => s.setAmbientSound);
+  const isTimerRunning = useAppStore((s) => s.isTimerRunning);
+  const timerSeconds = useAppStore((s) => s.timerSeconds);
+  const setFocusModalOpen = useAppStore((s) => s.setFocusModalOpen);
+  const setSettingsOpen = useAppStore((s) => s.setSettingsOpen);
 
   const currentDateObj = new Date(selectedDate);
+  const timerHours = Math.floor(timerSeconds / 3600);
+  const timerMins = Math.floor((timerSeconds % 3600) / 60);
+  const timerSecs = timerSeconds % 60;
+  const timerDisplay = `${timerHours > 0 ? `${timerHours.toString().padStart(2, '0')}:` : ''}${timerMins.toString().padStart(2, '0')}:${timerSecs.toString().padStart(2, '0')}`;
 
   const handlePrevDay = () => {
     const d = new Date(currentDateObj);
@@ -64,15 +74,16 @@ export const HeaderBar: React.FC = () => {
   };
 
   return (
-    <header className="h-14 border-b border-border-subtle bg-canvas-elevated liquid-glass sticky top-0 z-40 flex items-center justify-between px-3 md:px-5 select-none transition-colors duration-200">
+    <header className="h-14 border-b border-border-subtle bg-canvas-elevated liquid-glass sticky top-0 z-50 flex items-center justify-between px-2 sm:px-4 select-none transition-colors duration-200 gap-2">
       {/* ========================================================
           RIGHT / START (RTL): Brand & Date Navigator
           ======================================================== */}
-      <div className="flex items-center gap-2 md:gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
         {/* Left Sidebar Toggle Button */}
         <button
+          type="button"
           onClick={toggleLeftSidebar}
-          className={`p-1.5 rounded-xl border transition flex items-center justify-center touch-target ${
+          className={`p-1.5 rounded-xl border transition flex items-center justify-center cursor-pointer ${
             isLeftSidebarOpen
               ? 'bg-accent-primary/20 text-accent-primary border-accent-primary/40'
               : 'border-border-subtle hover:bg-white/5 text-ink-muted hover:text-ink-primary'
@@ -84,119 +95,159 @@ export const HeaderBar: React.FC = () => {
         </button>
 
         {/* Brand Pill */}
-        <div className="flex items-center gap-2 pl-2 border-l border-border-subtle">
-          <div className="w-7 h-7 rounded-xl bg-accent-primary flex items-center justify-center text-white font-black text-xs shadow-needle">
+        <div className="flex items-center gap-1.5 pl-1.5 border-l border-border-subtle">
+          <div className="w-6 h-6 rounded-lg bg-accent-primary flex items-center justify-center text-white font-black text-[11px] shadow-needle">
             هم
           </div>
-          <span className="font-black text-sm tracking-tight hidden sm:inline-block text-ink-primary">هم‌پا</span>
+          <span className="font-black text-xs hidden lg:inline-block text-ink-primary">هم‌پا</span>
         </div>
 
         {/* Date Controls */}
         <div className="flex items-center gap-1">
           <button
+            type="button"
             onClick={handleToday}
-            className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-border-subtle hover:bg-white/5 active:scale-95 transition text-ink-primary"
+            className="px-2 py-1 text-xs font-bold rounded-lg border border-border-subtle hover:bg-white/5 active:scale-95 transition text-ink-primary cursor-pointer"
           >
             امروز
           </button>
 
           <div className="flex items-center border border-border-subtle rounded-lg overflow-hidden">
             <button
+              type="button"
               onClick={handlePrevDay}
-              className="p-1 hover:bg-white/5 text-ink-muted hover:text-ink-primary transition"
+              className="p-1 hover:bg-white/5 text-ink-muted hover:text-ink-primary transition cursor-pointer"
               title="روز قبل"
+              aria-label="روز قبل"
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
             <button
+              type="button"
               onClick={handleNextDay}
-              className="p-1 hover:bg-white/5 text-ink-muted hover:text-ink-primary transition"
+              className="p-1 hover:bg-white/5 text-ink-muted hover:text-ink-primary transition cursor-pointer"
               title="روز بعد"
+              aria-label="روز بعد"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <span className="text-xs md:text-sm font-bold text-ink-primary mr-1 whitespace-nowrap">
+          <span className="text-xs font-bold text-ink-primary whitespace-nowrap hidden sm:inline">
             {formatDateTitle(currentDateObj, calendarSystem)}
           </span>
-        </div>
-
-        {/* Dual Calendar Switcher */}
-        <div className="hidden xl:flex items-center p-0.5 rounded-lg bg-canvas-secondary border border-border-subtle text-[11px]">
-          <button
-            onClick={() => setCalendarSystem('jalali')}
-            className={`px-2 py-0.5 rounded-md transition font-medium ${
-              calendarSystem === 'jalali'
-                ? 'bg-accent-primary text-white font-bold shadow-sm'
-                : 'text-ink-muted hover:text-ink-primary'
-            }`}
-          >
-            شمسی
-          </button>
-          <button
-            onClick={() => setCalendarSystem('gregorian')}
-            className={`px-2 py-0.5 rounded-md transition font-medium ${
-              calendarSystem === 'gregorian'
-                ? 'bg-accent-primary text-white font-bold shadow-sm'
-                : 'text-ink-muted hover:text-ink-primary'
-            }`}
-          >
-            میلادی
-          </button>
         </div>
       </div>
 
       {/* ========================================================
-          CENTER: Clean View Switcher (Desktop Navigation Tabs)
+          CENTER: Unified View Switcher (All 9 Tabs Side-by-Side Without Scroll)
           ======================================================== */}
-      <div className="hidden md:flex items-center p-0.5 rounded-xl bg-canvas-secondary border border-border-subtle text-xs overflow-x-auto max-w-[680px]">
+      <nav 
+        role="tablist" 
+        aria-label="نماهای کاری هم‌پا" 
+        className="hidden md:flex items-center justify-center gap-0.5 lg:gap-1 p-0.5 rounded-xl bg-canvas-secondary/70 border border-border-subtle overflow-hidden flex-shrink-0"
+      >
         {NAV_TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = viewMode === tab.id;
           return (
             <button
               key={tab.id}
+              role="tab"
+              type="button"
+              aria-selected={isActive}
               onClick={() => setViewMode(tab.id as any)}
-              className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap text-xs ${
-                isActive ? 'text-white font-bold' : 'text-ink-muted hover:text-ink-primary'
+              className={`flex items-center justify-center gap-1 px-1.5 lg:px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 ${
+                isActive
+                  ? 'bg-accent-primary text-white shadow-sm'
+                  : 'text-ink-muted hover:text-ink-primary hover:bg-black/5 dark:hover:bg-white/5'
               }`}
+              title={tab.label}
             >
-              {isActive && (
-                <motion.div
-                  layoutId="headerActiveTab"
-                  className="absolute inset-0 bg-accent-primary rounded-lg shadow-sm"
-                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                />
-              )}
-              <Icon className="w-3.5 h-3.5 relative z-10" />
-              <span className="relative z-10">{tab.label}</span>
+              <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="text-[11px] lg:text-xs">{tab.label}</span>
             </button>
           );
         })}
-      </div>
+      </nav>
 
       {/* ========================================================
-          LEFT / END (RTL): Command Palette & User Profile
-          (Uncluttered, clean!)
+          LEFT / END (RTL): Live Status Pills, Search, Theme & Profile
           ======================================================== */}
-      <div className="flex items-center gap-2">
-        {/* Command Palette Trigger */}
+      <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
+        {/* Live Active Timer Capsule */}
+        {isTimerRunning && (
+          <button
+            type="button"
+            onClick={() => setFocusModalOpen(true)}
+            className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent-primary/15 border border-accent-primary/40 text-accent-primary text-xs font-mono font-bold hover:bg-accent-primary/25 transition active:scale-95 cursor-pointer"
+            title="مشاهده استودیو تمرکز زنده"
+            aria-label={`تایمر تمرکز فعال: ${timerDisplay}`}
+          >
+            <span className="w-2 h-2 rounded-full bg-accent-primary shadow-needle animate-pulse" />
+            <span className="tabular-nums">{timerDisplay}</span>
+          </button>
+        )}
+
+        {/* Live Ambient Sound Capsule */}
+        {ambientSound.isPlaying && (
+          <button
+            type="button"
+            onClick={() => setAmbientSound('none')}
+            className="flex items-center gap-1 px-2 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/40 text-indigo-400 text-xs font-bold hover:bg-indigo-500/25 transition active:scale-95 cursor-pointer"
+            title="توقف صدای آرامش‌بخش محیطی"
+            aria-label="صدای محیطی در حال پخش - کلیک برای توقف"
+          >
+            <Volume2 className="w-3 h-3 animate-bounce" />
+            <span className="hidden xl:inline text-[11px]">محیطی</span>
+          </button>
+        )}
+
+        {/* Theme Toggle (Light / Dark Mode) */}
         <button
-          onClick={() => setCommandPaletteOpen(true)}
-          className="p-1.5 md:px-2.5 md:py-1 rounded-xl border border-border-subtle hover:bg-white/5 text-ink-muted hover:text-ink-primary transition flex items-center gap-1.5 text-xs"
-          title="جستجو و پالت دستورات (Cmd+K)"
+          type="button"
+          onClick={toggleTheme}
+          className="p-1.5 rounded-xl border border-border-subtle hover:bg-white/5 text-ink-muted hover:text-ink-primary transition cursor-pointer"
+          title={isDark ? 'تغییر به تم روشن Mindful' : 'تغییر به تم تیره Precision'}
+          aria-label={isDark ? 'فعال‌سازی تم روشن' : 'فعال‌سازی تم تیره'}
         >
-          <Search className="w-4 h-4" />
-          <span className="hidden lg:inline text-ink-muted">جستجو</span>
-          <kbd className="hidden lg:inline text-[10px] font-mono bg-white/5 px-1 py-0.5 rounded border border-border-subtle">⌘K</kbd>
+          {isDark ? (
+            <Sun className="w-4 h-4 text-amber-400" />
+          ) : (
+            <Moon className="w-4 h-4 text-indigo-400" />
+          )}
         </button>
 
-        {/* User Profile Avatar */}
-        <div className="flex items-center gap-2 pr-1 border-r border-border-subtle">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-accent-primary to-amber-500 flex items-center justify-center text-white text-xs font-bold uppercase shadow-sm">
-            {user.displayName ? user.displayName.slice(0, 1) : 'ک'}
-          </div>
+        {/* Command Palette Trigger */}
+        <button
+          type="button"
+          onClick={() => setCommandPaletteOpen(true)}
+          className="p-1.5 rounded-xl border border-border-subtle hover:bg-white/5 text-ink-muted hover:text-ink-primary transition flex items-center gap-1 text-xs cursor-pointer"
+          title="جستجو و پالت دستورات (Cmd+K)"
+          aria-label="جستجو و پالت دستورات سریع"
+        >
+          <Search className="w-4 h-4" />
+          <kbd className="hidden 2xl:inline text-[10px] font-mono bg-white/5 px-1 py-0.5 rounded border border-border-subtle">⌘K</kbd>
+        </button>
+
+        {/* User Profile Avatar & Settings Trigger */}
+        <div className="flex items-center pr-1 border-r border-border-subtle">
+          <button 
+            type="button"
+            onClick={() => setSettingsOpen(true)}
+            className="group flex items-center gap-1.5 p-0.5 rounded-full hover:ring-2 hover:ring-accent-primary/50 transition cursor-pointer active:scale-95"
+            title="تنظیمات، شخصی‌سازی تم و پروفایل کاربری (Alt+S)"
+            aria-label="باز کردن تنظیمات و پروفایل کاربری"
+          >
+            <div 
+              className="w-7 h-7 rounded-full bg-gradient-to-tr from-accent-primary to-amber-500 flex items-center justify-center text-white text-xs font-black uppercase shadow-needle transition group-hover:scale-105"
+            >
+              {user.displayName ? user.displayName.slice(0, 1) : 'ک'}
+            </div>
+            <span className="hidden 2xl:inline text-xs font-bold text-ink-primary max-w-[80px] truncate">
+              {user.displayName || 'کاربر'}
+            </span>
+          </button>
         </div>
       </div>
     </header>

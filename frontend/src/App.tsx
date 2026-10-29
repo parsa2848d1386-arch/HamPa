@@ -23,19 +23,48 @@ import { MorningPlanningModal } from './components/rituals/MorningPlanningModal'
 import { EveningReflectionModal } from './components/rituals/EveningReflectionModal';
 import { ShortcutCheatSheetModal } from './components/common/ShortcutCheatSheetModal';
 import { CreateTaskModal } from './components/modals/CreateTaskModal';
+import { SettingsModal } from './components/modals/SettingsModal';
+import { applyThemeToDocument } from './lib/themeEngine';
+import { subscribeToAuthChanges } from './lib/firebase';
 
 export const App: React.FC = () => {
-  const isDark = useAppStore((s) => s.isDark);
+  const themePreset = useAppStore((s) => s.themePreset);
+  const accentColorId = useAppStore((s) => s.accentColorId);
   const viewMode = useAppStore((s) => s.viewMode);
+  const isTimerRunning = useAppStore((s) => s.isTimerRunning);
+  const isTimerPaused = useAppStore((s) => s.isTimerPaused);
+  const tickTimer = useAppStore((s) => s.tickTimer);
+  const updateUserProfile = useAppStore((s) => s.updateUserProfile);
 
-  // Set dark class on HTML element based on initial state
+  // Subscribe to Firebase Auth state
   useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDark]);
+    const unsubscribe = subscribeToAuthChanges((fbUser) => {
+      if (fbUser) {
+        updateUserProfile({
+          uid: fbUser.uid,
+          displayName: fbUser.displayName || 'کاربر هم‌پا',
+          email: fbUser.email,
+          photoURL: fbUser.photoURL,
+          isGuest: fbUser.isAnonymous,
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, [updateUserProfile]);
+
+  // Global reliable timer ticker (runs whether modal is open or minimized in PiP)
+  useEffect(() => {
+    if (!isTimerRunning || isTimerPaused) return;
+    const interval = setInterval(() => {
+      tickTimer();
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isTimerRunning, isTimerPaused, tickTimer]);
+
+  // Synchronize Telegram themes & dynamic accent colors
+  useEffect(() => {
+    applyThemeToDocument(themePreset, accentColorId);
+  }, [themePreset, accentColorId]);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-canvas text-ink-primary font-vazir antialiased select-none">
@@ -49,13 +78,13 @@ export const App: React.FC = () => {
 
         {/* Zone 2: Center Interactive View Port */}
         <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-          <AnimatePresence mode="wait">
+          <AnimatePresence>
             <motion.div
               key={viewMode}
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -5 }}
-              transition={{ duration: 0.15, ease: 'easeOut' }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.1 }}
               className="flex-1 flex flex-col h-full overflow-hidden relative"
             >
               {viewMode === 'dashboard' && <MainDashboardView />}
@@ -86,6 +115,7 @@ export const App: React.FC = () => {
 
       {/* Modals & Overlays */}
       <CreateTaskModal />
+      <SettingsModal />
       <FocusTimerModal />
       <AIBrainDumpDrawer />
       <MorningPlanningModal />

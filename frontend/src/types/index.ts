@@ -93,6 +93,9 @@ export interface AmbientAudioState {
   volume: number; // 0.0 to 1.0
 }
 
+export type ThemePreset = 'midnight' | 'telegram' | 'day' | 'sepia';
+export type AccentColorId = 'orange' | 'blue' | 'indigo' | 'emerald' | 'violet' | 'amber' | 'rose';
+
 export interface UserProfile {
   uid: string;
   email: string | null;
@@ -102,6 +105,9 @@ export interface UserProfile {
   streakDays: number;
   lastStudyDate: string; // YYYY-MM-DD
   dailyCapacityMinutes: number; // default 360 (6 hours)
+  targetExamDate?: string; // Target exam ISO date or YYYY-MM-DD
+  targetExamTitle?: string; // Target exam title (e.g. "کنکور سراسری")
+  bio?: string;
 }
 
 export type CalendarSystem = 'jalali' | 'gregorian';

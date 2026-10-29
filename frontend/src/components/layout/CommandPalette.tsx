@@ -12,7 +12,8 @@ import {
   Sunset,
   HelpCircle,
   Clock,
-  LayoutGrid
+  LayoutGrid,
+  Sliders
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 
@@ -26,6 +27,7 @@ export const CommandPalette: React.FC = () => {
   const setBrainDumpOpen = useAppStore((s) => s.setBrainDumpOpen);
   const setCheatSheetOpen = useAppStore((s) => s.setCheatSheetOpen);
   const setFocusModalOpen = useAppStore((s) => s.setFocusModalOpen);
+  const setSettingsOpen = useAppStore((s) => s.setSettingsOpen);
   const setCalendarSystem = useAppStore((s) => s.setCalendarSystem);
   const calendarSystem = useAppStore((s) => s.calendarSystem);
 
@@ -155,6 +157,13 @@ export const CommandPalette: React.FC = () => {
         setOpen(false);
         setCalendarSystem(calendarSystem === 'jalali' ? 'gregorian' : 'jalali');
       }
+    },
+    {
+      id: 'open-settings',
+      title: 'تنظیمات، شخصی‌سازی تم‌های تلگرامی و پروفایل کاربر',
+      shortcut: 'Alt + S',
+      icon: Sliders,
+      action: () => { setOpen(false); setSettingsOpen(true); }
     },
     {
       id: 'toggle-theme',

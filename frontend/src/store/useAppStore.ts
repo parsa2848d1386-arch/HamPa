@@ -11,160 +11,29 @@ import type {
   AmbientAudioState, 
   AmbientSoundType,
   BlockNote,
+  ThemePreset,
+  AccentColorId,
 } from '../types';
 import type { ParsedDraftItem } from '../lib/brainDumpParser';
 import { audioEngine } from '../lib/audioEngine';
 import { getTodayKey } from '../lib/calendarUtils';
+import { applyThemeToDocument } from '../lib/themeEngine';
 
 const DEFAULT_SUBJECTS: Subject[] = [
-  { id: 'subj-1', name: 'ریاضی و حسابان', color: '#3B82F6', targetDailyMinutes: 120, totalSecondsStudied: 14400 },
-  { id: 'subj-2', name: 'فیزیک پیشرفته', color: '#8B5CF6', targetDailyMinutes: 90, totalSecondsStudied: 9800 },
-  { id: 'subj-3', name: 'برنامه‌نویسی و وب', color: '#FF4700', targetDailyMinutes: 180, totalSecondsStudied: 21600 },
-  { id: 'subj-4', name: 'زبان انگلیسی', color: '#F59E0B', targetDailyMinutes: 60, totalSecondsStudied: 5400 },
-  { id: 'subj-5', name: 'زیست‌شناسی', color: '#10B981', targetDailyMinutes: 90, totalSecondsStudied: 7200 },
+  { id: 'subj-1', name: 'ریاضی و حسابان', color: '#3B82F6', targetDailyMinutes: 120, totalSecondsStudied: 0 },
+  { id: 'subj-2', name: 'فیزیک پیشرفته', color: '#8B5CF6', targetDailyMinutes: 90, totalSecondsStudied: 0 },
+  { id: 'subj-3', name: 'برنامه‌نویسی و وب', color: '#FF4700', targetDailyMinutes: 180, totalSecondsStudied: 0 },
+  { id: 'subj-4', name: 'زبان انگلیسی', color: '#F59E0B', targetDailyMinutes: 60, totalSecondsStudied: 0 },
+  { id: 'subj-5', name: 'زیست‌شناسی', color: '#10B981', targetDailyMinutes: 90, totalSecondsStudied: 0 },
 ];
 
-const INITIAL_BLOCKS: BlockNote[] = [
-  { id: 'b1', type: 'heading2', content: 'اهداف جلسه و نکات کلیدی' },
-  { id: 'b2', type: 'callout', content: 'تمرکز ۱۰۰٪ روی حل تست‌های چالشی و یادداشت خطاهای پرتکرار.' },
-  { id: 'b3', type: 'checklist', content: 'مرور خلاصه درسنامه و روابط مهم', checked: true },
-  { id: 'b4', type: 'checklist', content: 'حل تست‌های ۱۰ تا ۳۵ مبحث توابع', checked: false },
-  { id: 'b5', type: 'checklist', content: 'بررسی پاسخ‌نامه تشریحی و ثبت نکات در دفترچه', checked: false },
-  { id: 'b6', type: 'code', content: '// فرمول کلیدی مساحت زیر نمودار:\n∫ f(x) dx = F(b) - F(a)', language: 'javascript' },
-];
+const INITIAL_BLOCKS: BlockNote[] = [];
 
 const today = getTodayKey();
 
-const DEFAULT_TASKS: Task[] = [
-  {
-    id: 'task-1',
-    title: 'توسعه معماری دیزاین سیستم HamPA',
-    description: 'پیاده‌سازی توکن‌های رنگی، زمان‌سنجی کرون و تایم‌لاین بصری',
-    subjectId: 'subj-3',
-    date: today,
-    startTime: '08:30',
-    durationMinutes: 90,
-    color: '#FF4700',
-    priority: 'urgent',
-    status: 'in_progress',
-    isMIT: true,
-    tags: ['طراحی', 'فرانت‌اند', 'معماری'],
-    subtasks: [
-      { id: 'st-1', title: 'پیاده‌سازی توکن‌های Precision Dark و Mindful Light', completed: true },
-      { id: 'st-2', title: 'موتور صوتی Web Audio API و تایمر شناور', completed: true },
-      { id: 'st-3', title: 'رندرینگ تایم‌لاین ۲۴ ساعته ۱۰ دقیقه‌ای', completed: false },
-    ],
-    blocks: INITIAL_BLOCKS,
-    totalSecondsStudied: 3600,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'task-2',
-    title: 'حل ۲۰ تست حسابان مبحث حد و پیوستگی',
-    description: 'تحلیل تست‌های کنکور سال‌های اخیر با متد زمان‌دار',
-    subjectId: 'subj-1',
-    date: today,
-    startTime: '10:30',
-    durationMinutes: 75,
-    color: '#3B82F6',
-    priority: 'high',
-    status: 'todo',
-    isMIT: true,
-    tags: ['کنکور', 'تست', 'ریاضی'],
-    subtasks: [
-      { id: 'st-4', title: 'تست‌های ۱ تا ۱۰ بدون پاسخ‌نامه', completed: false },
-      { id: 'st-5', title: 'تحلیل نکات غلط و نزده', completed: false },
-    ],
-    blocks: [],
-    totalSecondsStudied: 0,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'task-3',
-    title: 'مرور لغات ۵۰۴ و ریدینگ زبان تخصصی',
-    subjectId: 'subj-4',
-    date: today,
-    startTime: '13:00',
-    durationMinutes: 45,
-    color: '#F59E0B',
-    priority: 'medium',
-    status: 'todo',
-    isMIT: true,
-    tags: ['واژگان', 'انگلیسی'],
-    subtasks: [
-      { id: 'st-6', title: 'مرور لایتنر درس ۱۲', completed: true },
-      { id: 'st-7', title: 'یک متن درک مطلب زمان‌دار', completed: false },
-    ],
-    blocks: [],
-    totalSecondsStudied: 1800,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'task-4',
-    title: 'آزمون شبیه‌ساز فیزیک دوازدهم',
-    subjectId: 'subj-2',
-    date: today,
-    startTime: '15:00',
-    durationMinutes: 90,
-    color: '#8B5CF6',
-    priority: 'high',
-    status: 'todo',
-    isMIT: false,
-    tags: ['آزمون', 'فیزیک'],
-    subtasks: [],
-    blocks: [],
-    totalSecondsStudied: 0,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'task-5',
-    title: 'ریست و استراحت آگاهانه + پیاده‌روی',
-    date: today,
-    startTime: '17:00',
-    durationMinutes: 30,
-    color: '#10B981',
-    priority: 'low',
-    status: 'todo',
-    isMIT: false,
-    tags: ['سلامت', 'ذهن'],
-    subtasks: [],
-    blocks: [],
-    totalSecondsStudied: 0,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }
-];
+const DEFAULT_TASKS: Task[] = [];
 
-const DEFAULT_SESSIONS: StudySession[] = [
-  {
-    id: 'sess-1',
-    subjectId: 'subj-3',
-    subjectName: 'برنامه‌نویسی و وب',
-    taskId: 'task-1',
-    taskTitle: 'توسعه معماری دیزاین سیستم HamPA',
-    durationSeconds: 3600,
-    startedAt: new Date(Date.now() - 7200000).toISOString(),
-    endedAt: new Date(Date.now() - 3600000).toISOString(),
-    mode: 'stopwatch',
-    dateKey: today,
-  },
-  {
-    id: 'sess-2',
-    subjectId: 'subj-4',
-    subjectName: 'زبان انگلیسی',
-    taskId: 'task-3',
-    taskTitle: 'مرور لغات ۵۰۴ و ریدینگ زبان تخصصی',
-    durationSeconds: 1800,
-    startedAt: new Date(Date.now() - 14400000).toISOString(),
-    endedAt: new Date(Date.now() - 12600000).toISOString(),
-    mode: 'pomodoro',
-    dateKey: today,
-  }
-];
+const DEFAULT_SESSIONS: StudySession[] = [];
 
 interface AppState {
   // Navigation & View
@@ -194,6 +63,14 @@ interface AppState {
   isPiPVisible: boolean;
   ambientSound: AmbientAudioState;
 
+  // Customization & Study Engine
+  themePreset: ThemePreset;
+  accentColorId: AccentColorId;
+  isSettingsOpen: boolean;
+  dayCutoffHour: number; // 5 for 05:00 AM YPT reset
+  pomodoroWorkMinutes: number;
+  pomodoroBreakMinutes: number;
+
   // Data
   tasks: Task[];
   subjects: Subject[];
@@ -219,6 +96,12 @@ interface AppState {
   setCommandPaletteOpen: (open: boolean) => void;
   setCheatSheetOpen: (open: boolean) => void;
   setFocusModalOpen: (open: boolean) => void;
+  setSettingsOpen: (open: boolean) => void;
+  setThemePreset: (preset: ThemePreset) => void;
+  setAccentColorId: (id: AccentColorId) => void;
+  setDayCutoffHour: (hour: number) => void;
+  setPomodoroSettings: (work: number, breakTime: number) => void;
+  updateUserProfile: (updates: Partial<UserProfile>) => void;
 
   // Task Actions
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'totalSecondsStudied'>) => void;
@@ -242,6 +125,10 @@ interface AppState {
   // Planning Actions
   applyBrainDumpDrafts: (items: ParsedDraftItem[]) => void;
   setUser: (user: UserProfile) => void;
+  setTasks: (tasks: Task[]) => void;
+  setSessions: (sessions: StudySession[]) => void;
+  setSubjects: (subjects: Subject[]) => void;
+  clearAllData: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -267,37 +154,59 @@ export const useAppStore = create<AppState>()(
       isTimerRunning: false,
       isTimerPaused: false,
       timerSeconds: 0,
-      activeSubjectId: 'subj-3',
-      activeTaskId: 'task-1',
+      activeSubjectId: 'subj-1',
+      activeTaskId: null,
       isPiPVisible: false,
       ambientSound: { type: 'none', isPlaying: false, volume: 0.5 },
+
+      themePreset: 'telegram',
+      accentColorId: 'orange',
+      isSettingsOpen: false,
+      dayCutoffHour: 5,
+      pomodoroWorkMinutes: 25,
+      pomodoroBreakMinutes: 5,
 
       tasks: DEFAULT_TASKS,
       subjects: DEFAULT_SUBJECTS,
       sessions: DEFAULT_SESSIONS,
       user: {
-        uid: 'guest-hampa-user',
-        email: 'user@hampa.ir',
-        displayName: 'کاربر همراه',
+        uid: 'guest-' + Math.random().toString(36).substring(2, 9),
+        email: '',
+        displayName: 'کاربر هم‌پا',
         photoURL: null,
         isGuest: true,
-        streakDays: 14,
+        streakDays: 0,
         lastStudyDate: today,
         dailyCapacityMinutes: 360,
+        targetExamDate: '',
+        targetExamTitle: '',
+        bio: '',
       },
 
       setViewMode: (viewMode) => set({ viewMode }),
       setCalendarSystem: (calendarSystem) => set({ calendarSystem }),
       setSelectedDate: (selectedDate) => set({ selectedDate }),
       toggleTheme: () => {
-        const next = !get().isDark;
-        if (next) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
-        set({ isDark: next });
+        const currentPreset = get().themePreset;
+        const isCurrentlyDark = currentPreset === 'midnight' || currentPreset === 'telegram';
+        const nextPreset: ThemePreset = isCurrentlyDark ? 'day' : 'telegram';
+        const nextDark = !isCurrentlyDark;
+        set({ themePreset: nextPreset, isDark: nextDark });
+        applyThemeToDocument(nextPreset, get().accentColorId);
       },
+      setThemePreset: (themePreset) => {
+        const isDark = themePreset === 'midnight' || themePreset === 'telegram';
+        set({ themePreset, isDark });
+        applyThemeToDocument(themePreset, get().accentColorId);
+      },
+      setAccentColorId: (accentColorId) => {
+        set({ accentColorId });
+        applyThemeToDocument(get().themePreset, accentColorId);
+      },
+      setSettingsOpen: (isSettingsOpen) => set({ isSettingsOpen }),
+      setDayCutoffHour: (dayCutoffHour) => set({ dayCutoffHour }),
+      setPomodoroSettings: (pomodoroWorkMinutes, pomodoroBreakMinutes) => set({ pomodoroWorkMinutes, pomodoroBreakMinutes }),
+      updateUserProfile: (updates) => set((state) => ({ user: { ...state.user, ...updates } })),
       toggleLeftSidebar: () => set((state) => ({ isLeftSidebarOpen: !state.isLeftSidebarOpen })),
       toggleRightInspector: () => set((state) => ({ isRightInspectorOpen: !state.isRightInspectorOpen })),
       setLeftSidebarOpen: (isLeftSidebarOpen) => set({ isLeftSidebarOpen }),
@@ -519,17 +428,53 @@ export const useAppStore = create<AppState>()(
       },
 
       setUser: (user) => set({ user }),
+      setTasks: (tasks) => set({ tasks }),
+      setSessions: (sessions) => set({ sessions }),
+      setSubjects: (subjects) => set({ subjects }),
+      clearAllData: () => set({
+        tasks: [],
+        sessions: [],
+        activeTaskId: null,
+        subjects: DEFAULT_SUBJECTS,
+      }),
     }),
     {
-      name: 'hampa-workspace-store',
+      name: 'hampa-workspace-v3',
       partialize: (state) => ({
         calendarSystem: state.calendarSystem,
         isDark: state.isDark,
+        themePreset: state.themePreset,
+        accentColorId: state.accentColorId,
+        dayCutoffHour: state.dayCutoffHour,
+        pomodoroWorkMinutes: state.pomodoroWorkMinutes,
+        pomodoroBreakMinutes: state.pomodoroBreakMinutes,
         tasks: state.tasks,
         subjects: state.subjects,
         sessions: state.sessions,
         user: state.user,
-      })
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // If previous localStorage contains fake demo tasks, automatically sanitize it
+          if (state.tasks && state.tasks.some(t => t.id === 'task-1' || t.title.includes('دیزاین سیستم'))) {
+            state.tasks = [];
+          }
+          if (state.sessions && state.sessions.some(s => s.id === 'sess-1' || s.id === 'sess-2')) {
+            state.sessions = [];
+          }
+          if (state.user && state.user.streakDays === 14 && (state.user.email === 'user@hampa.ir' || state.user.displayName === 'کاربر همراه')) {
+            state.user = {
+              ...state.user,
+              email: '',
+              displayName: 'کاربر هم‌پا',
+              streakDays: 0,
+              targetExamDate: '',
+              targetExamTitle: '',
+              bio: '',
+            };
+          }
+        }
+      }
     }
   )
 );

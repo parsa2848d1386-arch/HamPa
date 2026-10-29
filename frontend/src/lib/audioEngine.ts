@@ -7,6 +7,7 @@ class AudioEngine {
   private noiseNode: AudioNode | null = null;
   private binauralOscLeft: OscillatorNode | null = null;
   private binauralOscRight: OscillatorNode | null = null;
+  private mergerNode: ChannelMergerNode | null = null;
   private isRunning: boolean = false;
   private currentType: AmbientSoundType = 'none';
 
@@ -63,6 +64,15 @@ class AudioEngine {
       this.binauralOscRight = null;
     }
 
+    if (this.mergerNode) {
+      try {
+        this.mergerNode.disconnect();
+      } catch {
+        // Ignored
+      }
+      this.mergerNode = null;
+    }
+
     this.isRunning = false;
     this.currentType = 'none';
   }
@@ -114,6 +124,7 @@ class AudioEngine {
     } else if (type === 'binaural_focus') {
       // 14Hz Beta/Alpha focus beat (200Hz left, 214Hz right)
       const merger = this.ctx.createChannelMerger(2);
+      this.mergerNode = merger;
       this.binauralOscLeft = this.ctx.createOscillator();
       this.binauralOscRight = this.ctx.createOscillator();
 

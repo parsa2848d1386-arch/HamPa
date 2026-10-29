@@ -31,21 +31,7 @@ export const FocusTimerModal: React.FC = () => {
   const pauseTimer = useAppStore((s) => s.pauseTimer);
   const resumeTimer = useAppStore((s) => s.resumeTimer);
   const stopFocusSession = useAppStore((s) => s.stopFocusSession);
-  const tickTimer = useAppStore((s) => s.tickTimer);
   const setPiPVisible = useAppStore((s) => s.setPiPVisible);
-
-  // 1-second timer tick effect
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-    if (isTimerRunning && !isTimerPaused) {
-      interval = setInterval(() => {
-        tickTimer();
-      }, 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isTimerRunning, isTimerPaused, tickTimer]);
 
   if (!isOpen) return null;
 
